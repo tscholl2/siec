@@ -41,6 +41,12 @@ func (curve *SIEC255Params) IsOnCurve(x, y *big.Int) bool {
 
 // Add returns the sum of (x1,y1) and (x2,y2)
 func (curve *SIEC255Params) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
+	if x1.BitLen() == 0 && y1.BitLen() == 0 {
+		return x2, y2
+	}
+	if x2.BitLen() == 0 && y2.BitLen() == 0 {
+		return x1, y1
+	}
 	if x1.Cmp(x2) == 0 && y1.Cmp(y2) == 0 {
 		return curve.Double(x1, y1)
 	}
@@ -98,7 +104,7 @@ func (curve *SIEC255Params) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int
 	for _, b := range k {
 		for bitNum := 0; bitNum < 8; bitNum++ {
 			x, y = curve.Double(x, y)
-			if b&0x80 == 0x80 {
+			if b&0x80 == 0x80 { // if top bit set
 				x, y = curve.Add(x1, y1, x, y)
 			}
 			b <<= 1
