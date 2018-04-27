@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/elliptic"
 	"math/big"
+	"reflect"
 	"testing"
 )
 
@@ -73,5 +74,31 @@ func TestScaleP256(t *testing.T) {
 	}
 	if y.Cmp(v) != 0 {
 		t.Errorf("P256.ScalarBaseMult() gotY = %v, want %v", y, v)
+	}
+}
+
+func TestLiftX(t *testing.T) {
+	curve := SIEC255()
+	type args struct {
+		X *big.Int
+	}
+	tests := []struct {
+		name  string
+		args  args
+		wantX *big.Int
+		wantY *big.Int
+	}{
+		{"generator lifts correctly", args{curve.Gx}, curve.Gx, curve.Gy},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotX, gotY := LiftX(tt.args.X)
+			if !reflect.DeepEqual(gotX, tt.wantX) {
+				t.Errorf("LiftX() gotX = %v, want %v", gotX, tt.wantX)
+			}
+			if !reflect.DeepEqual(gotY, tt.wantY) {
+				t.Errorf("LiftX() gotY = %v, want %v", gotY, tt.wantY)
+			}
+		})
 	}
 }
