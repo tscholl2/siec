@@ -6,6 +6,24 @@ import (
 	"testing"
 )
 
+func TestToAndFromBigIntRandom(t *testing.T) {
+	g := newGenerator(1)
+	for i := 0; i < 10; i++ {
+		i1 := g.next()
+		e1 := FromBigInt(i1)
+		i2 := ToBigInt(e1)
+		e2 := FromBigInt(i2)
+		if i1.Cmp(i2) != 0 {
+			t.Errorf("ToBigInt(FromBigInt(%v)) = %v, want %v", i1, i2, i1)
+			t.FailNow()
+		}
+		if e2 != e1 {
+			t.Errorf("FromBigInt(ToBigInt(%v)) = %v, want %v", e1, e2, e1)
+			t.FailNow()
+		}
+	}
+}
+
 func TestToAndFromBigInt(t *testing.T) {
 	i1 := big.NewInt(1)
 	i64 := new(big.Int).Add(new(big.Int).Lsh(i1, 64), i1)
@@ -36,29 +54,45 @@ func TestToAndFromBigInt(t *testing.T) {
 	}
 }
 
-func TestToAndFromBigIntRandom(t *testing.T) {
+func TestNormalize(t *testing.T) {
+	tests := []struct {
+		name string
+		args *big.Int
+		want *big.Int
+	}{
+		{"1", bigIntFromString("1"), bigIntFromString("1")},
+		{"p-1", bigIntFromString("28948022309329048855892746252183396360603931420023084536990047309120118726720"), bigIntFromString("14474011154664524427946373126091698180301965710011542268495023654560059363360")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := FromBigInt(tt.args)
+			want := FromBigInt(tt.want)
+			got := normalize(args)
+			if got != want {
+				t.Errorf("normalize(%v) = %v, want %v ", args, got, want)
+			}
+		})
+	}
+}
+
+func TestNormalizeRandom(t *testing.T) {
 	g := newGenerator(1)
 	for i := 0; i < 10; i++ {
-		i1 := g.next()
-		e1 := FromBigInt(i1)
-		i2 := ToBigInt(e1)
-		e2 := FromBigInt(i2)
-		if i1.Cmp(i2) != 0 {
-			t.Errorf("ToBigInt(FromBigInt(%v)) = %v, want %v", i1, i2, i1)
-			t.FailNow()
-		}
-		if e2 != e1 {
-			t.Errorf("FromBigInt(ToBigInt(%v)) = %v, want %v", e1, e2, e1)
+		n := g.next()
+		ai := n.Mod(g.next(), pAsBigInt)
+		a := FromBigInt(ai)
+		b := normalize(a)
+		if FromBigInt(n) != b {
+			t.Errorf("/%d normalize(%v) = %v, want %v", i, a, b, FromBigInt(n))
 			t.FailNow()
 		}
 	}
 }
 
 func Test_isGreaterThanOrEqualToP(t *testing.T) {
-	p, _ := new(big.Int).SetString("28948022309329048855892746252183396360603931420023084536990047309120118726721", 10)
 	i1 := big.NewInt(1)
-	pm1 := new(big.Int).Sub(p, i1)
-	pp1 := new(big.Int).Add(p, i1)
+	pm1 := new(big.Int).Sub(pAsBigInt, i1)
+	pp1 := new(big.Int).Add(pAsBigInt, i1)
 	type args struct {
 		a Element
 	}
@@ -69,7 +103,7 @@ func Test_isGreaterThanOrEqualToP(t *testing.T) {
 	}{
 		{"1", args{FromBigInt(i1)}, false},
 		{"p-1", args{FromBigInt(pm1)}, false},
-		{"p", args{FromBigInt(p)}, true},
+		{"p", args{FromBigInt(pAsBigInt)}, true},
 		{"p+1", args{FromBigInt(pp1)}, true},
 		{"2*(p-1)", args{FromBigInt(new(big.Int).Add(pm1, pm1))}, true},
 	}
@@ -91,11 +125,21 @@ func newGenerator(seed int64) intGenerator {
 }
 
 func (b intGenerator) next() *big.Int {
-	p, _ := new(big.Int).SetString("28948022309329048855892746252183396360603931420023084536990047309120118726721", 10)
 	z := big.NewInt(b.source.Int63())
 	z = z.Lsh(z, 64).Add(z, big.NewInt(b.source.Int63()))
 	z = z.Lsh(z, 64).Add(z, big.NewInt(b.source.Int63()))
 	z = z.Lsh(z, 64).Add(z, big.NewInt(b.source.Int63()))
-	z = z.Mod(z, p)
+	z = z.Mod(z, pAsBigInt)
+	if z.Cmp(pMinusOneOver2AsBigInt) > 0 {
+		z.Sub(z, pAsBigInt)
+	}
 	return z
+}
+
+func bigIntFromString(s string) *big.Int {
+	n, ok := new(big.Int).SetString(s, 10)
+	if !ok {
+		panic("invalid number: " + s)
+	}
+	return n
 }

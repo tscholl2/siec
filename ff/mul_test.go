@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func sTestMulRandom(t *testing.T) {
+func TestMulRandom(t *testing.T) {
 	g := newGenerator(1)
 	p, _ := new(big.Int).SetString("28948022309329048855892746252183396360603931420023084536990047309120118726721", 10)
 	for i := 0; i < 100; i++ {

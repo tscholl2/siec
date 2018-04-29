@@ -7,14 +7,13 @@ import (
 )
 
 func Test_add(t *testing.T) {
-	p, _ := new(big.Int).SetString("28948022309329048855892746252183396360603931420023084536990047309120118726721", 10)
 	i1 := big.NewInt(1)
 	i2 := big.NewInt(2)
 	e1 := FromBigInt(i1)
 	e2 := FromBigInt(i2)
-	pm1 := new(big.Int).Sub(p, i1)
+	pm1 := new(big.Int).Sub(pAsBigInt, i1)
 	epm1 := FromBigInt(pm1)
-	dpm1 := new(big.Int).Mod(new(big.Int).Add(pm1, pm1), p)
+	dpm1 := new(big.Int).Mod(new(big.Int).Add(pm1, pm1), pAsBigInt)
 	edpm1 := FromBigInt(dpm1)
 	type args struct {
 		a Element
@@ -40,13 +39,12 @@ func Test_add(t *testing.T) {
 
 func TestAddRandom(t *testing.T) {
 	g := newGenerator(1)
-	p, _ := new(big.Int).SetString("28948022309329048855892746252183396360603931420023084536990047309120118726721", 10)
 	for i := 0; i < 100; i++ {
 		ia := g.next()
 		a := FromBigInt(ia)
 		ib := g.next()
 		b := FromBigInt(ib)
-		ic := new(big.Int).Mod(new(big.Int).Add(ia, ib), p)
+		ic := new(big.Int).Mod(new(big.Int).Add(ia, ib), pAsBigInt)
 		c := add(a, b)
 		if ic.Cmp(ToBigInt(c)) != 0 {
 			t.Errorf("/%d add(%v,%v) = %v, want %v", i, a, b, c, FromBigInt(ic))
@@ -66,18 +64,7 @@ func BenchmarkFFAdd(b *testing.B) {
 	}
 }
 
-func BenchmarkBIAdd1(b *testing.B) {
-	g := newGenerator(1)
-	a1 := g.next()
-	a2 := g.next()
-	c := new(big.Int)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		c.Add(a1, a2)
-	}
-}
-
-func BenchmarkBIAdd2(b *testing.B) {
+func BenchmarkBIAdd(b *testing.B) {
 	g := newGenerator(1)
 	a1 := g.next()
 	a2 := g.next()
