@@ -26,6 +26,21 @@ func Test_add(t *testing.T) {
 		})
 	}
 }
+
+func Test_addRandom(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		a1 := randomElementNormalized(int64(2 * i))
+		a2 := randomElementNormalized(int64(2*i + 1))
+		A1 := ToBigInt(a1)
+		A2 := ToBigInt(a2)
+		B := new(big.Int).Add(A1, A2)
+		if args, got, want := []Element{a1, a2}, add(a1, a2), FromBigInt(B); got != want {
+			t.Errorf("/%d add(%v) = %v, want %v", i, args, got, want)
+			t.FailNow()
+		}
+	}
+}
+
 func Benchmark_add(b *testing.B) {
 	a1 := randomElement(1)
 	a2 := randomElement(2)
