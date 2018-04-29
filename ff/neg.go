@@ -1,16 +1,9 @@
 package ff
 
 func neg(a Element) Element {
-	var z uint64
-	for j := 0; j < 3; j++ {
-		if a[j] > pAsElement[j]+z {
-			a[j] = pAsElement[j] - (a[j] + z)
-			z = 1
-		} else {
-			a[j] = pAsElement[j] - (a[j] + z)
-			z = 0
-		}
+	if a[3]&mask63 == 0 && a[2] == 0 && a[1] == 0 && a[0] == 0 {
+		return Element{}
 	}
-	a[3] = pAsElement[3] - (a[3] + z)
+	a[3] = a[3] ^ bit64
 	return a
 }

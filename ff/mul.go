@@ -1,6 +1,13 @@
 package ff
 
 func mul(a, b Element) (c Element) {
+	// TODO: implement
+	A, B := ToBigInt(a), ToBigInt(b)
+	return FromBigInt(A.Mod(A.Mul(A, B), pBI))
+}
+
+/*
+func mul(a, b Element) (c Element) {
 	d := a
 	for i := 0; i < 4; i++ {
 		for j := uint8(0); j < 64; j++ {
@@ -17,7 +24,6 @@ func mul2(a, b Element) Element {
 	return karatsuba(a, b)
 }
 
-/*
 		x = x₁B + x₀
 		y = y₁B + y₀
 
@@ -27,7 +33,7 @@ func mul2(a, b Element) Element {
 
 		xy = z₂B^2 + z₁B + z₀
 	}
-*/
+
 func karatsuba(a, b Element) (c Element) {
 	var x1, x0, y1, y0 Element
 	var B uint8
@@ -67,3 +73,4 @@ func karatsuba(a, b Element) (c Element) {
 	}
 	return add(z2, add(z1, z0))
 }
+*/

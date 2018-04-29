@@ -1,6 +1,7 @@
 package ff
 
 func double(a Element) Element {
+	// TODO: optimize
 	return add(a, a)
 	/*
 		a = normalize(a) // check sign

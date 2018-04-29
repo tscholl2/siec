@@ -1,39 +1,35 @@
 package ff
 
 import (
-	"math/big"
+	"reflect"
 	"testing"
 )
 
-func TestDoubleRandom(t *testing.T) {
-	g := newGenerator(1)
-	two := big.NewInt(2)
-	p, _ := new(big.Int).SetString("28948022309329048855892746252183396360603931420023084536990047309120118726721", 10)
-	for i := 0; i < 100; i++ {
-		ia := g.next()
-		a := FromBigInt(ia)
-		ic := new(big.Int).Mod(new(big.Int).Mul(ia, two), p)
-		c := double(a)
-		if ic.Cmp(ToBigInt(c)) != 0 {
-			t.Errorf("/%d double(%v) = %v, want %v", i, a, c, FromBigInt(ic))
-			t.Errorf("/%d (alt) double(%v) = %v, want %v", i, ia, ToBigInt(c), ic)
-			t.FailNow()
-		}
+func Test_double(t *testing.T) {
+	tests := []struct {
+		name string
+		args Element
+		want Element
+	}{
+		{"1", Element{1, 0, 0, 0}, Element{2, 0, 0, 0}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := double(tt.args); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("double() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
-
-func BenchmarkFFDouble(b *testing.B) {
-	g := newGenerator(1)
-	a := FromBigInt(g.next())
+func Benchmark_double(b *testing.B) {
+	a := randomElement(1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		double(a)
 	}
 }
-
-func BenchmarkFFDouble2(b *testing.B) {
-	g := newGenerator(1)
-	a := FromBigInt(g.next())
+func Benchmark_double2(b *testing.B) {
+	a := randomElement(1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		add(a, a)
