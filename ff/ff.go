@@ -7,6 +7,7 @@ import (
 const (
 	bit64  = uint64(1) << 63            // 2^63
 	bit63  = uint64(1) << 62            // 2^62
+	bit33  = uint64(1) << 32            // 2^32
 	mask64 = uint64(0xffffffffffffffff) // 2^64-1
 	mask63 = mask64 - bit64             // 2^63 - 1
 )
