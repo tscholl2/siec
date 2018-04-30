@@ -38,7 +38,7 @@ var (
 //     element = {a,b,c,d} = (- if top bit of d is set else +)(a + b*2^64 + c*2^128 + (d&0x7fffffffffffffff)*2^192)
 //
 // The mask is because the top bit of d is 1 represents the sign of the element.
-// This representation can store all integers in the range (-2^256,2^256).
+// This representation can store all integers in the range (-2^255,2^255).
 //
 // Normalized Elements are represented as the unique representative in the range
 // [-(p-1)/2, (p-1)/2]. For example:
