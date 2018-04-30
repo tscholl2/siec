@@ -28,6 +28,84 @@ func Test_mul(t *testing.T) {
 	}
 }
 
+func Test_add256_random(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		x := randArr(2 * i)
+		y := randArr(2*i + 1)
+		y[3] = y[3] & mask63 // clear last bit so garunteed it will fit in 256 bits
+		got := add256(x, y)
+		want := biArr(new(big.Int).Add(arrBI(x), arrBI(y)))
+		if got != want {
+			t.Errorf("/%d add256(%v,%v) = %v, want %v", i, x, y, got, want)
+			t.FailNow()
+		}
+	}
+}
+
+func Benchmark_add256(b *testing.B) {
+	x := randArr(1)
+	y := randArr(2)
+	y[3] = y[3] & mask63
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		add256(x, y)
+	}
+}
+
+func Test_sub256_random(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		x := randArr(2 * i)
+		y := randArr(2*i + 1)
+		x[3] = x[3] | bit64  // set top bit so x > y
+		y[3] = y[3] & mask63 // clear last bit so y < x
+		got := sub256(x, y)
+		want := biArr(new(big.Int).Sub(arrBI(x), arrBI(y)))
+		if got != want {
+			t.Errorf("/%d sub256(%v,%v) = %v, want %v", i, x, y, got, want)
+			t.FailNow()
+		}
+	}
+}
+
+func Benchmark_sub256(b *testing.B) {
+	x := randArr(1)
+	y := randArr(2)
+	x[3] = x[3] | bit64
+	y[3] = y[3] & mask63
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sub256(x, y)
+	}
+}
+
+func randArr(seed int) [4]uint64 {
+	r := rand.NewSource(int64(seed))
+	return [4]uint64{uint64(r.Int63()), uint64(r.Int63()), uint64(r.Int63()), uint64(r.Int63())}
+}
+
+func arrBI(x [4]uint64) *big.Int {
+	a := new(big.Int).SetUint64(x[3])
+	a.Lsh(a, 64)
+	a.Add(a, new(big.Int).SetUint64(x[2]))
+	a.Lsh(a, 64)
+	a.Add(a, new(big.Int).SetUint64(x[1]))
+	a.Lsh(a, 64)
+	a.Add(a, new(big.Int).SetUint64(x[0]))
+	return a
+}
+
+func biArr(n *big.Int) (x [4]uint64) {
+	x[0] = n.Uint64()
+	n = new(big.Int).Set(n)
+	n.Rsh(n, 64)
+	x[1] = n.Uint64()
+	n.Rsh(n, 64)
+	x[2] = n.Uint64()
+	n.Rsh(n, 64)
+	x[3] = n.Uint64()
+	return
+}
+
 func Benchmark_mul(b *testing.B) {
 	a1 := randomElement(1)
 	a2 := randomElement(2)
@@ -43,6 +121,61 @@ func Benchmark_mulBI(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		c.Mod(c.Mul(a1, a2), pBI)
+	}
+}
+
+func Test_mul128(t *testing.T) {
+	type args struct {
+		x [2]uint64
+		y [2]uint64
+	}
+	tests := []struct {
+		name  string
+		args  args
+		wantZ [4]uint64
+	}{
+		{"2*1", args{[2]uint64{2, 0}, [2]uint64{1, 0}}, [4]uint64{2, 0, 0, 0}},
+		{"(2^128 - 1)(2^128 - 1)", args{[2]uint64{0xffffffffffffffff, 0xffffffffffffffff}, [2]uint64{0xffffffffffffffff, 0xffffffffffffffff}}, [4]uint64{0x1, 0, 0xfffffffffffffffe, 0xffffffffffffffff}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotZ := mul128(tt.args.x, tt.args.y); !reflect.DeepEqual(gotZ, tt.wantZ) {
+				t.Errorf("mul128() = %v, want %v", gotZ, tt.wantZ)
+			}
+		})
+	}
+}
+
+func Test_mul128_random(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		x := [2]uint64{randArr(2 * i)[0], randArr(2 * i)[1]}
+		y := [2]uint64{randArr(2*i + 1)[0], randArr(2*i + 1)[1]}
+		got := mul128(x, y)
+		want := biArr(new(big.Int).Mul(arrBI([4]uint64{x[0], x[1], 0, 0}), arrBI([4]uint64{y[0], y[1], 0, 0})))
+		if got != want {
+			t.Errorf("/%d mul128(%v,%v) = %v, want %v", i, x, y, got, want)
+			t.FailNow()
+		}
+	}
+}
+
+func Benchmark_mul128(b *testing.B) {
+	x := [2]uint64{randArr(1)[0], randArr(1)[1]}
+	y := [2]uint64{randArr(2)[0], randArr(2)[1]}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		mul128(x, y)
+	}
+}
+
+func Benchmark_mul128_BI(b *testing.B) {
+	x := [4]uint64{randArr(1)[0], randArr(1)[1], 0, 0}
+	y := [4]uint64{randArr(2)[0], randArr(2)[1], 0, 0}
+	A, B := arrBI(x), arrBI(y)
+	C := new(big.Int)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		C.Mul(A, B)
 	}
 }
 

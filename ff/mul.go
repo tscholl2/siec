@@ -52,49 +52,76 @@ func mul128(x, y [2]uint64) (z [4]uint64) {
 	*/
 	z2 := mul64(x[1], y[1])
 	z0 := mul64(x[0], y[0])
-	z1 := add128(mul64(x[1], y[0]), mul64(x[0], y[1])) // TODO: use karatsuba, check overflow
-	z1 = add128(add128(z1, z2), z0)                    // check overflow
-	z[2], z[3] = z2[0], z2[1]
-	z[0], z[1] = z0[0], z0[1]
-	// add z1
-	var k uint64
-	if z[1] == 0xffffffffffffffff && z1[0] > 0 {
-		k = 1
-	}
-	z[1] = z[1] + z1[0]
-	// check for overflow with z[2]+z1[1]+k
-	if (z[2] == 0xffffffffffffffff && (z1[1] > 0 || k == 1)) || (z[2]+k > 0xffffffffffffffff-z1[1]) {
-		z[3]++
-	}
-	z[2] = z[2] + z1[1] + k
-	return
-}
 
-func sub128(x, y [2]uint64) (z [2]uint64) {
-	z[0] = x[0] - y[0]
-	z[1] = x[1] - y[1]
-	if x[0] < y[0] {
-		z[1]--
-	}
+	z1a := mul64(x[1], y[0])
+	z1b := mul64(x[0], y[1])
+
+	z1 := add256([4]uint64{0, z1a[0], z1a[1], 0}, [4]uint64{0, z1b[0], z1b[1], 0})
+
+	z[0], z[1], z[2], z[3] = z0[0], z0[1], z2[0], z2[1]
+
+	z = add256(z, z1)
+
 	return
 }
 
 func sub256(x, y [4]uint64) (z [4]uint64) {
-	// TODO
-	return
-}
-
-func add128(x, y [2]uint64) (z [2]uint64) {
-	z[0] = x[0] + y[0]
-	z[1] = x[1] + y[1]
-	if x[0] > 0xffffffffffffffff-y[0] {
-		z[1]++
+	// x - y
+	var k uint64
+	for i := 0; i < 4; i++ {
+		z[i] = x[i] - (y[i] + k)
+		// if x[i] - (y[i]+k) < 0
+		if (x[i] == 0 && k == 1) || x[i]-k < y[i] {
+			k = 1
+		} else {
+			k = 0
+		}
 	}
 	return
 }
 
 func add256(x, y [4]uint64) (z [4]uint64) {
-	// TODO
+	// x + y
+	var k uint64
+	for i := 0; i < 4; i++ {
+		z[i] = x[i] + y[i] + k
+		// if x[i] + y[i]+ k > 0xffffffffffffffff
+		if (x[i] == 0xffffffffffffffff && k == 1) || x[i]+k > 0xffffffffffffffff-y[i] {
+			k = 1
+		} else {
+			k = 0
+		}
+	}
+	return
+}
+
+func sub128(x, y [2]uint64) (z [2]uint64) {
+	// x - y
+	var k uint64
+	for i := 0; i < 2; i++ {
+		z[i] = x[i] - (y[i] + k)
+		// if x[i] - (y[i]+k) < 0
+		if (x[i] == 0 && k == 1) || x[i]-k < y[i] {
+			k = 1
+		} else {
+			k = 0
+		}
+	}
+	return
+}
+
+func add128(x, y [2]uint64) (z [2]uint64) {
+	// x + y
+	var k uint64
+	for i := 0; i < 2; i++ {
+		z[i] = x[i] + y[i] + k
+		// if x[i] + y[i]+ k > 0xffffffffffffffff
+		if (x[i] == 0xffffffffffffffff && k == 1) || x[i]+k > 0xffffffffffffffff-y[i] {
+			k = 1
+		} else {
+			k = 0
+		}
+	}
 	return
 }
 
