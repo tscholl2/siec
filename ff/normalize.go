@@ -2,12 +2,10 @@ package ff
 
 // normalize converts an element from (-2^256,2^256) to [-(p-1)/2,(p-1)/2]
 func normalize(a Element) Element {
-	// If a < 0, then return -normalize(-a).
+	// If a < 0, then return -normalize(|a|).
 	if isNegative(a) {
 		a[3] = a[3] & mask63
-		a = normalize(a)
-		a[3] = a[3] ^ bit64
-		return a
+		return neg(normalize(a))
 	}
 	//
 	// Assume a >= 0.

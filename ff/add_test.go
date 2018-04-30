@@ -17,6 +17,8 @@ func Test_add(t *testing.T) {
 		want Element
 	}{
 		{"1 + 1", args{Element{1, 0, 0, 0}, Element{1, 0, 0, 0}}, Element{2, 0, 0, 0}},
+		{"p + 1", args{Element{1126179130581057, 9223372036854775808, 33558592, 4611686018427387904}, Element{1, 0, 0, 0}}, Element{1126179130581058, 9223372036854775808, 33558592, 4611686018427387904}},
+		{"1 + -1", args{Element{1, 0, 0, 0}, Element{1, 0, 0, bit64}}, Element{0, 0, 0, 0}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -28,12 +30,10 @@ func Test_add(t *testing.T) {
 }
 
 func Test_addRandom(t *testing.T) {
-	for i := 0; i < 10; i++ {
-		a1 := randomElementNormalized(int64(2 * i))
-		a2 := randomElementNormalized(int64(2*i + 1))
-		A1 := ToBigInt(a1)
-		A2 := ToBigInt(a2)
-		B := new(big.Int).Add(A1, A2)
+	for i := 0; i < 100; i++ {
+		a1 := normalize(randomElement(int64(2 * i)))
+		a2 := normalize(randomElement(int64(2*i + 1)))
+		B := new(big.Int).Add(ToBigInt(a1), ToBigInt(a2))
 		if args, got, want := []Element{a1, a2}, add(a1, a2), FromBigInt(B); got != want {
 			t.Errorf("/%d add(%v) = %v, want %v", i, args, got, want)
 			t.FailNow()

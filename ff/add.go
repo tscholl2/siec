@@ -1,17 +1,11 @@
 package ff
 
 func add(a, b Element) (c Element) {
-	// TODO: implement
-	/*
-		A, B := ToBigInt(a), ToBigInt(b)
-		return FromBigInt(A.Add(A, B))
-	*/
+	// return FromBigInt(new(big.Int).Add(ToBigInt(a), ToBigInt(b)))
+	// c = a + b
 	if isNegative(a) != isNegative(b) {
-		c = sub(a, b)
-		if isNegative(a) {
-			return neg(c)
-		}
-		return c
+		b[3] = b[3] ^ bit64
+		return sub(a, b)
 	}
 	var z uint64
 	for i := 0; i < 4; i++ {
@@ -23,5 +17,6 @@ func add(a, b Element) (c Element) {
 			z = 0
 		}
 	}
+	c[3] = c[3] | (a[3] & bit64)
 	return
 }
