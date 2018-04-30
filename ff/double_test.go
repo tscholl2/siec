@@ -1,6 +1,7 @@
 package ff
 
 import (
+	"math/big"
 	"reflect"
 	"testing"
 )
@@ -21,6 +22,18 @@ func Test_double(t *testing.T) {
 		})
 	}
 }
+
+func Test_doubleRandom(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		a := normalize(randomElement(int64(2 * i)))
+		B := new(big.Int).Add(ToBigInt(a), ToBigInt(a))
+		if args, got, want := []Element{a}, double(a), FromBigInt(B); got != want {
+			t.Errorf("/%d double(%v) = %v, want %v", i, args, got, want)
+			t.FailNow()
+		}
+	}
+}
+
 func Benchmark_double(b *testing.B) {
 	a := randomElement(1)
 	b.ResetTimer()
