@@ -138,3 +138,40 @@ func sub128(x, y [2]uint64) (z [2]uint64) {
 	}
 	return
 }
+
+func add512(x, y [5]uint64) (z [5]uint64) {
+	var k uint64
+	for i := 0; i < 5; i++ {
+		z[i] = x[i] + y[i] + k
+		if (x[i] == 0xffffffffffffffff && k == 1) || x[i]+k > 0xffffffffffffffff-y[i] {
+			k = 1
+		} else {
+			k = 0
+		}
+	}
+	return
+}
+
+func sub512(x, y [5]uint64) (z [5]uint64) {
+	var k uint64
+	for i := 0; i < 5; i++ {
+		z[i] = x[i] - (y[i] + k)
+		if (x[i] == 0 && k == 1) || x[i]-k < y[i] {
+			k = 1
+		} else {
+			k = 0
+		}
+	}
+	return
+}
+
+func cmp512(a [5]uint64, b [5]uint64) int {
+	for i := 4; i >= 0; i-- {
+		if a[i] > b[i] {
+			return 1
+		} else if a[i] < b[i] {
+			return -1
+		}
+	}
+	return 0
+}
