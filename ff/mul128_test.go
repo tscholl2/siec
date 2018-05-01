@@ -50,6 +50,15 @@ func Benchmark_mul128(b *testing.B) {
 	}
 }
 
+func Benchmark_mul128_2(b *testing.B) {
+	x := [2]uint64{randArr(1)[0], randArr(1)[1]}
+	y := [2]uint64{randArr(2)[0], randArr(2)[1]}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		mul128_2(x, y)
+	}
+}
+
 func Benchmark_mul128_BI(b *testing.B) {
 	x := [4]uint64{randArr(1)[0], randArr(1)[1], 0, 0}
 	y := [4]uint64{randArr(2)[0], randArr(2)[1], 0, 0}
