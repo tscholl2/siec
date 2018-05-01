@@ -18,50 +18,50 @@ func mul(x, y Element) (z Element) {
 	y0 := [2]uint64{y[0], y[1]}
 	y1 := [2]uint64{y[2], y[3]}
 	// Compute z₀,z₂
-	z2 := normalize(mul128(x1, y1))
-	z0 := normalize(mul128(x0, y0))
+	z2 := to320(mul128(x1, y1))
+	z0 := to320(mul128(x0, y0))
 	// a = |(x₀-x₁)(y₁-y₀)|
-	var a [4]uint64
+	var a [5]uint64
 	x0IsLessThanx1 := cmp(Element{x0[0], x0[1], 0, 0}, Element{x1[0], x1[1], 0, 0}) == -1
 	y1IsLessThany0 := cmp(Element{y1[0], y1[1], 0, 0}, Element{y0[0], y0[1], 0, 0}) == -1
 	aIsNegative := x0IsLessThanx1 != y1IsLessThany0
 	if aIsNegative {
 		if x0IsLessThanx1 {
-			a = normalize(mul128(sub128(x1, x0), sub128(y1, y0)))
+			a = to320(mul128(sub128(x1, x0), sub128(y1, y0)))
 		} else {
-			a = normalize(mul128(sub128(x0, x1), sub128(y0, y1)))
+			a = to320(mul128(sub128(x0, x1), sub128(y0, y1)))
 		}
 	} else {
 		if x0IsLessThanx1 {
-			a = normalize(mul128(sub128(x1, x0), sub128(y0, y1)))
+			a = to320(mul128(sub128(x1, x0), sub128(y0, y1)))
 		} else {
-			a = normalize(mul128(sub128(x0, x1), sub128(y1, y0)))
+			a = to320(mul128(sub128(x0, x1), sub128(y1, y0)))
 		}
 	}
 	// Now add z₀ and z₂.
-	z0Plusz2 := add(z0, z2)
+	z0Plusz2 := add320(z0, z2)
 	// Now compute z₁ = z₂ + z₀ +/- a.
-	var z1 [4]uint64
+	var z1 [5]uint64
 	if aIsNegative {
 		// z₁ = z₀ + z₂ - a
-		if cmp(z0Plusz2, a) == 1 {
-			z1 = sub(z0Plusz2, a)
-		} else {
-			z1 = sub(p, normalize(sub(a, z0Plusz2)))
-		}
+		// Note that because z₁ = x₀y₁ + x₁y₀ ≥ 0, we know that this subtraction is ok.
+		z1 = sub320(z0Plusz2, a)
 	} else {
 		// z₁ = a + z₀ + z₂
-		z1 = add(z0Plusz2, a) // a, z₀, z₂ are all normalized so can add them because 3p < 2^256.
+		z1 = add320(z0Plusz2, a)
 	}
 	// z = z₂*2^(256) + z₁*2^(128) + z₀
 	// TODO:
-	z = add(z0, normalize(Element{0, 0, z1[0], z1[1]}))
-	z = add(z, mulBy256(z2))
-	z = add(z, mulBy256(Element{z1[2], z1[3], 0, 0}))
+	// z5 is z as a 320 bit number
+	z5 := add320(z0, [5]uint64{0, 0, z1[0], z1[1], 0})
+	//z5 = add320(z5, mulBy256([5]uint64{z1[2], z1[3], 0, 0, 0}))
+	//z5 = add320(z5, mulBy256(z2))
+	// TODO: turn z5 into z
+	z[0] = z5[0]
 	return
 }
 
-func mulBy256(a Element) Element {
+func mulBy256(a [5]uint64) [5]uint64 {
 	//
 	// (-2^256 % p) = {0x1001040c208104,0,0x8004102}
 	// (2^384 % p)  = {0x30c30d2479030608, 0x800c, 0x30030c24618300}
@@ -111,9 +111,9 @@ func mulBy256(a Element) Element {
 	ζall = add(ζall, normalize(ζ[2]))
 	ζall = sub(ζall, ζ[3])
 	if a[2] == 0 && a[3] == 0 {
-		return ζall
+		return [5]uint64{0, 0, 0, 0, 0} //TODO: ζall
 	}
-	return Element{0, 0, 0, 0}
+	return [5]uint64{0, 0, 0, 0, 0}
 }
 
 func findZ(a1, a2 uint64) (z Element) {
@@ -139,7 +139,12 @@ func sub128(x, y [2]uint64) (z [2]uint64) {
 	return
 }
 
-func add512(x, y [5]uint64) (z [5]uint64) {
+func to320(x [4]uint64) (z [5]uint64) {
+	z[0], z[1], z[2], z[3] = x[0], x[1], x[2], x[3]
+	return
+}
+
+func add320(x, y [5]uint64) (z [5]uint64) {
 	var k uint64
 	for i := 0; i < 5; i++ {
 		z[i] = x[i] + y[i] + k
@@ -152,7 +157,7 @@ func add512(x, y [5]uint64) (z [5]uint64) {
 	return
 }
 
-func sub512(x, y [5]uint64) (z [5]uint64) {
+func sub320(x, y [5]uint64) (z [5]uint64) {
 	var k uint64
 	for i := 0; i < 5; i++ {
 		z[i] = x[i] - (y[i] + k)
@@ -165,7 +170,7 @@ func sub512(x, y [5]uint64) (z [5]uint64) {
 	return
 }
 
-func cmp512(a [5]uint64, b [5]uint64) int {
+func cmp320(a [5]uint64, b [5]uint64) int {
 	for i := 4; i >= 0; i-- {
 		if a[i] > b[i] {
 			return 1
