@@ -28,3 +28,11 @@ func Test_normalize(t *testing.T) {
 		})
 	}
 }
+
+func Benchmark_normalize(b *testing.B) {
+	a := randomElement(1)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		normalize(a)
+	}
+}

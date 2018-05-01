@@ -18,7 +18,7 @@ func Test_mul64(t *testing.T) {
 		wantZ [2]uint64
 	}{
 		{"2*1", args{2, 1}, [2]uint64{2, 0}},
-		{"(2^64 - 1)(2^64 - 1)", args{0xffffffffffffffff, 0xffffffffffffffff}, [2]uint64{0x0000000000000001, 0xfffffffffffffffe}},
+		{"(2^64 - 1)(2^64 - 1)", args{0xffffffffffffffff, 0xffffffffffffffff}, [2]uint64{1, 0xfffffffffffffffe}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

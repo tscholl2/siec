@@ -19,7 +19,7 @@ func mul64(x, y uint64) (z [2]uint64) {
 	z[0], z[1] = x0*y0, x1*y1
 	a := x1 * y0
 	b := x0 * y1
-	c := a + b
+	c := a + b // overflow is checked below and stored in w[1]
 	// w = z1*2^B
 	w := [2]uint64{c << 32, c >> 32}
 	if a > 0xffffffffffffffff-b {
