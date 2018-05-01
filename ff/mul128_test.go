@@ -30,10 +30,10 @@ func Test_mul128(t *testing.T) {
 
 func Test_mul128_random(t *testing.T) {
 	for i := 0; i < 100; i++ {
-		x := [2]uint64{randArr(2 * i)[0], randArr(2 * i)[1]}
-		y := [2]uint64{randArr(2*i + 1)[0], randArr(2*i + 1)[1]}
+		x := [2]uint64{randomElement(2 * i)[0], randomElement(2 * i)[1]}
+		y := [2]uint64{randomElement(2*i + 1)[0], randomElement(2*i + 1)[1]}
 		got := mul128(x, y)
-		want := biArr(new(big.Int).Mul(arrBI([4]uint64{x[0], x[1], 0, 0}), arrBI([4]uint64{y[0], y[1], 0, 0})))
+		want := BigIntToElement(new(big.Int).Mul(ElementToBigInt(Element{x[0], x[1], 0, 0}), ElementToBigInt(Element{y[0], y[1], 0, 0})))
 		if got != want {
 			t.Errorf("/%d mul128(%v,%v) = %v, want %v", i, x, y, got, want)
 			t.FailNow()
@@ -42,27 +42,18 @@ func Test_mul128_random(t *testing.T) {
 }
 
 func Benchmark_mul128(b *testing.B) {
-	x := [2]uint64{randArr(1)[0], randArr(1)[1]}
-	y := [2]uint64{randArr(2)[0], randArr(2)[1]}
+	x := [2]uint64{randomElement(1)[0], randomElement(1)[1]}
+	y := [2]uint64{randomElement(2)[0], randomElement(2)[1]}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		mul128(x, y)
 	}
 }
 
-func Benchmark_mul128_2(b *testing.B) {
-	x := [2]uint64{randArr(1)[0], randArr(1)[1]}
-	y := [2]uint64{randArr(2)[0], randArr(2)[1]}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		mul128_2(x, y)
-	}
-}
-
 func Benchmark_mul128_BI(b *testing.B) {
-	x := [4]uint64{randArr(1)[0], randArr(1)[1], 0, 0}
-	y := [4]uint64{randArr(2)[0], randArr(2)[1], 0, 0}
-	A, B := arrBI(x), arrBI(y)
+	x := [4]uint64{randomElement(1)[0], randomElement(1)[1], 0, 0}
+	y := [4]uint64{randomElement(2)[0], randomElement(2)[1], 0, 0}
+	A, B := ElementToBigInt(x), ElementToBigInt(y)
 	C := new(big.Int)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
