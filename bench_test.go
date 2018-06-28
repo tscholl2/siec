@@ -1,15 +1,31 @@
-package main
+package siec
 
 import (
 	"crypto/elliptic"
-	"math/big"
 	"testing"
 )
 
 func BenchmarkDouble(b *testing.B) {
 	curve := SIEC255()
-	x, _ := new(big.Int).SetString("6784692728748995825599862402855483522016546426567910438357042338075027826575", 10)
-	y, _ := new(big.Int).SetString("14982863109320699114866362806305859444453206692004135551371801829915686450358", 10)
+	x, y := curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41})
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		curve.Double(x, y)
+	}
+}
+
+func BenchmarkDoubleP256(b *testing.B) {
+	curve := elliptic.P256()
+	x, y := curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41})
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		curve.Double(x, y)
+	}
+}
+
+func BenchmarkDoubleP224(b *testing.B) {
+	curve := elliptic.P224()
+	x, y := curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41})
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		curve.Double(x, y)
@@ -18,10 +34,28 @@ func BenchmarkDouble(b *testing.B) {
 
 func BenchmarkAdd(b *testing.B) {
 	curve := SIEC255()
-	x1, _ := new(big.Int).SetString("5", 10)
-	y1, _ := new(big.Int).SetString("12", 10)
-	x2, _ := new(big.Int).SetString("6784692728748995825599862402855483522016546426567910438357042338075027826575", 10)
-	y2, _ := new(big.Int).SetString("14982863109320699114866362806305859444453206692004135551371801829915686450358", 10)
+	x1, y1 := curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41})
+	x2, y2 := curve.ScalarBaseMult([]byte{0x40, 0x10, 0x41})
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		curve.Add(x1, y1, x2, y2)
+	}
+}
+
+func BenchmarkAddP256(b *testing.B) {
+	curve := elliptic.P256()
+	x1, y1 := curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41})
+	x2, y2 := curve.ScalarBaseMult([]byte{0x40, 0x10, 0x41})
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		curve.Add(x1, y1, x2, y2)
+	}
+}
+
+func BenchmarkAddP224(b *testing.B) {
+	curve := elliptic.P224()
+	x1, y1 := curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41})
+	x2, y2 := curve.ScalarBaseMult([]byte{0x40, 0x10, 0x41})
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		curve.Add(x1, y1, x2, y2)
