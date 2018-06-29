@@ -49,6 +49,15 @@ func Benchmark_double(b *testing.B) {
 	}
 }
 
+func Benchmark_double_BI(b *testing.B) {
+	a := ElementToBigInt(randomElement(1))
+	z := new(big.Int)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		z.Lsh(a, 1)
+	}
+}
+
 func Benchmark_double_add(b *testing.B) {
 	a := randomElement(1)
 	b.ResetTimer()

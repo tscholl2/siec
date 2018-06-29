@@ -116,14 +116,6 @@ func mulBy256(a [5]uint64) [5]uint64 {
 	return [5]uint64{0, 0, 0, 0, 0}
 }
 
-func findZ(a1, a2 uint64) (z Element) {
-	return
-}
-
-func findW(a3, a4 uint64) (w Element) {
-	return
-}
-
 func sub128(x, y [2]uint64) (z [2]uint64) {
 	// x - y
 	var k uint64
