@@ -86,3 +86,42 @@ func mul128(x, y [2]uint64) (z [4]uint64) {
 	z[3] = z2[1] + z1[2] + k
 	return
 }
+
+func mul128_2(x, y [2]uint64) (z [4]uint64) {
+	/*
+		x = x₁*2^B + x₀
+		y = y₁*2^B + y₀
+		z₂ = x₁y₁
+		z₁ = (x₀-x₁)(y₁-y₀) + x₁y₁ + x₀y₀ = x₀y₁ + x₁y₀
+		z₀ = x₀y₀
+		xy = z₂*2^(2B) + z₁*2^B + z₀
+	*/
+	z2 := mul64(x[1], y[1])
+	z0 := mul64(x[0], y[0])
+
+	a := mul64(x[0], y[1])
+	b := mul64(x[1], y[0])
+	z1 := [3]uint64{a[0] + b[0], 0, 0}
+	var k uint64
+	if a[0] > 0xffffffffffffffff-b[0] {
+		k = 1
+	}
+	z1[1] = a[1] + b[1] + k
+	if (a[1] == 0xffffffffffffffff && k == 1) || (a[1]+k) > 0xffffffffffffffff-b[1] {
+		z1[2] = 1
+	}
+	k = 0
+	z[0] = z0[0]
+	z[1] = z0[1] + z1[0]
+	if z0[1] > 0xffffffffffffffff-z1[0] {
+		k = 1
+	}
+	z[2] = z2[0] + z1[1] + k
+	if (z2[0] == 0xffffffffffffffff && k == 1) || (z2[0]+k > 0xffffffffffffffff-z1[1]) {
+		k = 1
+	} else {
+		k = 0
+	}
+	z[3] = z2[1] + z1[2] + k
+	return
+}
