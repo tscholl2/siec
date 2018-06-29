@@ -2,6 +2,7 @@ package siec
 
 import (
 	"crypto/elliptic"
+	"crypto/rand"
 	"math/big"
 	"reflect"
 	"testing"
@@ -100,5 +101,34 @@ func TestLiftX(t *testing.T) {
 				t.Errorf("LiftX() gotY = %v, want %v", gotY, tt.wantY)
 			}
 		})
+	}
+}
+
+func TestCompress(t *testing.T) {
+	var x1, y1, x2, y2 *big.Int
+	x1, _ = new(big.Int).SetString("5", 10)
+	y1, _ = new(big.Int).SetString("12", 10)
+	x2, y2 = Decompress(Compress(x1, y1))
+	if x2.Cmp(x1) != 0 || y2.Cmp(y1) != 0 {
+		t.Errorf("(%v,%v) did not compress/decompress correctly, got (%v,%v)", x1, y1, x2, y2)
+	}
+	x1, _ = new(big.Int).SetString("6784692728748995825599862402855483522016546426567910438357042338075027826575", 10)
+	y1, _ = new(big.Int).SetString("14982863109320699114866362806305859444453206692004135551371801829915686450358", 10)
+	x2, y2 = Decompress(Compress(x1, y1))
+	if x2.Cmp(x1) != 0 || y2.Cmp(y1) != 0 {
+		t.Errorf("(%v,%v) did not compress/decompress correctly, got (%v,%v)", x1, y1, x2, y2)
+	}
+}
+
+func TestCompressRandom(t *testing.T) {
+	curve := SIEC255()
+	b := make([]byte, 32)
+	for i := 0; i < 10; i++ {
+		rand.Read(b)
+		x1, y1 := curve.ScalarBaseMult(b)
+		x2, y2 := Decompress(Compress(x1, y1))
+		if x2.Cmp(x1) != 0 || y2.Cmp(y1) != 0 {
+			t.Errorf("(%v,%v) did not compress/decompress correctly, got (%v,%v)", x1, y1, x2, y2)
+		}
 	}
 }
