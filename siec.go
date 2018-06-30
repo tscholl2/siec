@@ -52,27 +52,34 @@ func (curve *SIEC255Params) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
 	if x1.Cmp(x2) == 0 && y1.Cmp(y2) == 0 {
 		return curve.Double(x1, y1)
 	}
-	// TODO: optimize
-	// λ = (y2 - y1)/(x2 - x1)
-	lambda := new(big.Int).Sub(y2, y1)
-	z := new(big.Int).Sub(x2, x1)
-	z.Mod(z, curve.P)
-	if z.BitLen() == 0 {
-		return z.Set(zero), lambda.Set(zero)
-	}
-	z.ModInverse(z, curve.P)
-	lambda.Mul(lambda, z)
-	lambda.Mod(lambda, curve.P)
-	// x3 = λ² - x1 - x2
-	x3 := new(big.Int).Exp(lambda, two, curve.P)
-	x3.Sub(x3, z.Add(x1, x2))
-	x3.Mod(x3, curve.P)
-	// y3 = λ(x1 - x3) - y1
-	y3 := new(big.Int).Mul(lambda, z.Sub(x1, x3))
-	y3.Mod(y3, curve.P)
-	y3.Sub(y3, y1)
-	y3.Mod(y3, curve.P)
-	return x3, y3
+	X1, Y1, Z1 := affineToProjective(x1, y1)
+	X2, Y2, Z2 := affineToProjective(x2, y2)
+	X3, Y3, Z3 := add2007bl(X1, Y1, Z1, X2, Y2, Z2)
+	x, y = projectiveToAffine(X3, Y3, Z3)
+	return
+	/*
+		// TODO: optimize
+		// λ = (y2 - y1)/(x2 - x1)
+		lambda := new(big.Int).Sub(y2, y1)
+		z := new(big.Int).Sub(x2, x1)
+		z.Mod(z, curve.P)
+		if z.BitLen() == 0 {
+			return z.Set(zero), lambda.Set(zero)
+		}
+		z.ModInverse(z, curve.P)
+		lambda.Mul(lambda, z)
+		lambda.Mod(lambda, curve.P)
+		// x3 = λ² - x1 - x2
+		x3 := new(big.Int).Exp(lambda, two, curve.P)
+		x3.Sub(x3, z.Add(x1, x2))
+		x3.Mod(x3, curve.P)
+		// y3 = λ(x1 - x3) - y1
+		y3 := new(big.Int).Mul(lambda, z.Sub(x1, x3))
+		y3.Mod(y3, curve.P)
+		y3.Sub(y3, y1)
+		y3.Mod(y3, curve.P)
+		return x3, y3
+	*/
 }
 
 // Double returns 2*(x,y)
