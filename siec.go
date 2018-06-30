@@ -36,9 +36,12 @@ func (curve *SIEC255Params) Params() *SIEC255Params {
 // IsOnCurve reports whether the given (x,y) lies on the curve.
 func (curve *SIEC255Params) IsOnCurve(x, y *big.Int) bool {
 	// y² = x³ + 19
-	y2 := new(big.Int).Exp(y, two, curve.P)
-	x3 := new(big.Int).Exp(x, two, curve.P)
-	return y2.Cmp(x3.Add(x3, nineteen)) == 0
+	LHS := new(big.Int).Exp(y, two, curve.P)
+	LHS.Mod(LHS, curve.P)
+	RHS := new(big.Int).Exp(x, three, curve.P)
+	RHS.Add(RHS, nineteen)
+	RHS.Mod(RHS, curve.P)
+	return LHS.Cmp(RHS) == 0
 }
 
 // Add returns the sum of (x1,y1) and (x2,y2)
