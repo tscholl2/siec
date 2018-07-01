@@ -23,11 +23,59 @@ func projectiveToAffine(x, y, z *big.Int) (X, Y *big.Int) {
 	return
 }
 
-// http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-add-2001-b
-func add2007bl(X1, Y1, Z1, X2, Y2, Z2 *big.Int) (X3, Y3, Z3 *big.Int) {
+// assumes Z1 = Z2 = 1.
+func (curve *SIEC255Params) mmadd2007bl_opt(X1, Y1, X2, Y2 *big.Int) (X3, Y3, Z3 *big.Int) {
+	X3, Y3, Z3 = new(big.Int), new(big.Int), new(big.Int)
+	w := new(big.Int)
+	// H = X2-X1
+	H := Z3.Sub(X2, X1)
+	// HH = H^2
+	// I = 4*HH
+	I := Y3.Lsh(w.Mul(H, H), 2)
+	// J = H*I
+	J := new(big.Int).Mul(H, I)
+	// V = X1*I
+	V := new(big.Int).Mul(X1, I)
+	// r = 2*(Y2-Y1)
+	r := I.Lsh(w.Sub(Y2, Y1), 1)
+	// X3 = r^2-J-2*V
+	X3.Sub(w.Mul(r, r), X3.Add(J, X3.Lsh(V, 1)))
+	// Y3 = r*(V-X3)-2*Y1*J
+	Y3.Sub(w.Mul(r, w.Sub(V, X3)), Y3.Lsh(Y3.Mul(Y1, J), 1))
+	// Z3 = 2*H
+	Z3.Lsh(H, 1)
+	return
+}
+
+// assumes Z1 = Z2 = 1.
+func (curve *SIEC255Params) mmadd2007bl(X1, Y1, X2, Y2 *big.Int) (X3, Y3, Z3 *big.Int) {
 	w := new(big.Int)
 	ww := new(big.Int)
-	curve := SIEC255()
+	// H = X2-X1
+	H := new(big.Int).Sub(X2, X1)
+	// HH = H^2
+	HH := new(big.Int).Mul(H, H)
+	// I = 4*HH
+	I := new(big.Int).Lsh(HH, 2)
+	// J = H*I
+	J := new(big.Int).Mul(H, I)
+	// r = 2*(Y2-Y1)
+	r := new(big.Int).Lsh(w.Sub(Y2, Y1), 1)
+	// V = X1*I
+	V := new(big.Int).Mul(X1, I)
+	// X3 = r^2-J-2*V
+	X3 = new(big.Int).Sub(w.Mul(r, r), ww.Add(J, ww.Lsh(V, 1)))
+	// Y3 = r*(V-X3)-2*Y1*J
+	Y3 = new(big.Int).Sub(w.Mul(r, w.Sub(V, X3)), ww.Lsh(ww.Mul(Y1, J), 1))
+	// Z3 = 2*H
+	Z3 = new(big.Int).Lsh(H, 1)
+	return
+}
+
+// http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-add-2001-b
+func (curve *SIEC255Params) add2007bl(X1, Y1, Z1, X2, Y2, Z2 *big.Int) (X3, Y3, Z3 *big.Int) {
+	w := new(big.Int)
+	ww := new(big.Int)
 	// Z1Z1 = Z1^2
 	Z1Z1 := new(big.Int).Mul(Z1, Z1)
 	// Z2Z2 = Z2^2
@@ -43,7 +91,7 @@ func add2007bl(X1, Y1, Z1, X2, Y2, Z2 *big.Int) (X3, Y3, Z3 *big.Int) {
 	// H = U2-U1
 	H := new(big.Int).Sub(U2, U1)
 	// I = (2*H)^2
-	I := new(big.Int).Exp(w.Lsh(H, 1), two, curve.P)
+	I := new(big.Int).Mul(ww, ww.Lsh(H, 1))
 	// J = H*I
 	J := new(big.Int).Mul(H, I)
 	// r = 2*(S2-S1)
@@ -74,10 +122,9 @@ func add2007bl(X1, Y1, Z1, X2, Y2, Z2 *big.Int) (X3, Y3, Z3 *big.Int) {
 	return
 }
 
-func dbl2009l(X1, Y1, Z1 *big.Int) (X3, Y3, Z3 *big.Int) {
+func (curve *SIEC255Params) dbl2009l(X1, Y1, Z1 *big.Int) (X3, Y3, Z3 *big.Int) {
 	w := new(big.Int)
 	m := new(big.Int)
-	curve := SIEC255()
 	// A = X1^2
 	A := new(big.Int).Mul(X1, X1)
 	A.Mod(A, curve.P)

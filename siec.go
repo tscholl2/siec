@@ -56,15 +56,15 @@ func (curve *SIEC255Params) Add(x1, y1, x2, y2 *big.Int) (x3, y3 *big.Int) {
 	if x1.Cmp(x2) == 0 && y1.Cmp(y2) == 0 {
 		return curve.Double(x1, y1)
 	}
-	X1, Y1, Z1 := affineToProjective(x1, y1)
-	X2, Y2, Z2 := affineToProjective(x2, y2)
-	X3, Y3, Z3 := add2007bl(X1, Y1, Z1, X2, Y2, Z2)
+	X1, Y1, _ := affineToProjective(x1, y1)
+	X2, Y2, _ := affineToProjective(x2, y2)
+	X3, Y3, Z3 := curve.mmadd2007bl_opt(X1, Y1, X2, Y2)
 	x3, y3 = projectiveToAffine(X3, Y3, Z3)
 	/*
 		// TODO: optimize
 		// λ = (y2 - y1)/(x2 - x1)
-		lambda := new(big.Int).Sub(y2, y1)
 		z := new(big.Int).Sub(x2, x1)
+		lambda := new(big.Int).Sub(y2, y1)
 		z.Mod(z, curve.P)
 		if z.BitLen() == 0 {
 			return z.Set(zero), lambda.Set(zero)
