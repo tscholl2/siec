@@ -13,6 +13,7 @@ var (
 	zero     = big.NewInt(0)
 	two      = big.NewInt(2)
 	three    = big.NewInt(3)
+	eight    = big.NewInt(8)
 	nineteen = big.NewInt(19)
 )
 
@@ -45,7 +46,7 @@ func (curve *SIEC255Params) IsOnCurve(x, y *big.Int) bool {
 }
 
 // Add returns the sum of (x1,y1) and (x2,y2)
-func (curve *SIEC255Params) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
+func (curve *SIEC255Params) Add(x1, y1, x2, y2 *big.Int) (x3, y3 *big.Int) {
 	if x1.BitLen() == 0 && y1.BitLen() == 0 {
 		return x2, y2
 	}
@@ -58,8 +59,7 @@ func (curve *SIEC255Params) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
 	X1, Y1, Z1 := affineToProjective(x1, y1)
 	X2, Y2, Z2 := affineToProjective(x2, y2)
 	X3, Y3, Z3 := add2007bl(X1, Y1, Z1, X2, Y2, Z2)
-	x, y = projectiveToAffine(X3, Y3, Z3)
-	return
+	x3, y3 = projectiveToAffine(X3, Y3, Z3)
 	/*
 		// TODO: optimize
 		// λ = (y2 - y1)/(x2 - x1)
@@ -73,40 +73,45 @@ func (curve *SIEC255Params) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
 		lambda.Mul(lambda, z)
 		lambda.Mod(lambda, curve.P)
 		// x3 = λ² - x1 - x2
-		x3 := new(big.Int).Exp(lambda, two, curve.P)
+		x3 = new(big.Int).Exp(lambda, two, curve.P)
 		x3.Sub(x3, z.Add(x1, x2))
 		x3.Mod(x3, curve.P)
-		// y3 = λ(x1 - x3) - y1
-		y3 := new(big.Int).Mul(lambda, z.Sub(x1, x3))
+		// y = λ(x1 - x3) - y1
+		y3 = new(big.Int).Mul(lambda, z.Sub(x1, x3))
 		y3.Mod(y3, curve.P)
 		y3.Sub(y3, y1)
 		y3.Mod(y3, curve.P)
-		return x3, y3
 	*/
+	return
 }
 
 // Double returns 2*(x,y)
-func (curve *SIEC255Params) Double(x1, y1 *big.Int) (x, y *big.Int) {
-	x = new(big.Int)
-	y = new(big.Int)
+func (curve *SIEC255Params) Double(x1, y1 *big.Int) (x3, y3 *big.Int) {
+	x3 = new(big.Int)
+	y3 = new(big.Int)
+	/*
+		X1, Y1, Z1 := affineToProjective(x1, y1)
+		X3, Y3, Z3 := dbl2009l(X1, Y1, Z1)
+		x3, y3 = projectiveToAffine(X3, Y3, Z3)
+	*/
 	// TODO: optimize
 	// λ = (3x1^2)/(2y1)
-	lambda := new(big.Int).Mul(three, x.Exp(x1, two, curve.P))
+	lambda := new(big.Int).Mul(three, x3.Exp(x1, two, curve.P))
 	if y1.BitLen() == 0 {
-		return x.Set(zero), y.Set(zero)
+		return x3.Set(zero), y3.Set(zero)
 	}
-	x.Mul(two, y1)
-	x.ModInverse(x, curve.P)
-	lambda.Mul(lambda, x)
+	x3.Mul(two, y1)
+	x3.ModInverse(x3, curve.P)
+	lambda.Mul(lambda, x3)
 	// x3 = λ² - x1 - x2
-	x.Exp(lambda, two, curve.P)
-	x.Sub(x, y.Add(x1, x1))
-	x.Mod(x, curve.P)
-	// y = λ(x1 - x) - y1
-	y.Mul(lambda, new(big.Int).Sub(x1, x))
-	y.Mod(y, curve.P)
-	y.Sub(y, y1)
-	y.Mod(y, curve.P)
+	x3.Exp(lambda, two, curve.P)
+	x3.Sub(x3, y3.Add(x1, x1))
+	x3.Mod(x3, curve.P)
+	// y = λ(x1 - x3) - y1
+	y3.Mul(lambda, new(big.Int).Sub(x1, x3))
+	y3.Mod(y3, curve.P)
+	y3.Sub(y3, y1)
+	y3.Mod(y3, curve.P)
 	return
 }
 
@@ -123,6 +128,24 @@ func (curve *SIEC255Params) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int
 		}
 	}
 	return x, y
+	/*
+			X1, Y1, Z1 := affineToProjective(x1, y1)
+			X2, Y2, Z2 := new(big.Int), new(big.Int), new(big.Int)
+			for _, b := range k {
+			for bitNum := 0; bitNum < 8; bitNum++ {
+				X2, Y2, Z2 = dbl2009l(X2, Y2, Z2)
+				if b&0x80 == 0x80 { // if top bit set
+					X2, Y2, Z2 = add2007bl(X1, Y1, Z1, X2, Y2, Z2)
+				}
+				X2.Mod(X2, curve.P)
+				Y2.Mod(Y2, curve.P)
+				Z2.Mod(Z2, curve.P)
+				b <<= 1
+			}
+		}
+		x, y = projectiveToAffine(X2, Y2, Z2)
+		return
+	*/
 }
 
 // ScalarBaseMult returns k*G, where G is the base point of the group
