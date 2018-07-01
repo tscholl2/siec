@@ -15,19 +15,19 @@ func TestDouble(t *testing.T) {
 	u, _ := new(big.Int).SetString("6784692728748995825599862402855483522016546426567910438357042338075027826575", 10)
 	v, _ := new(big.Int).SetString("14982863109320699114866362806305859444453206692004135551371801829915686450358", 10)
 	if x.Cmp(u) != 0 {
-		t.Errorf("SIEC255Params.Double() gotX = %v, want %v", x, u)
+		t.Errorf("curve.Double() gotX = %v, want %v", x, u)
 	}
 	if y.Cmp(v) != 0 {
-		t.Errorf("SIEC255Params.Double() gotY = %v, want %v", y, v)
+		t.Errorf("curve.Double() gotY = %v, want %v", y, v)
 	}
 	x, y = curve.Double(x, y)
 	u, _ = new(big.Int).SetString("12318642006867402687195826566147291859634823582672295191656499276835526033145", 10)
 	v, _ = new(big.Int).SetString("9343467693237486709905252998911952863134805995110526737200728195882424275543", 10)
 	if x.Cmp(u) != 0 {
-		t.Errorf("SIEC255Params.Double() gotX = %v, want %v", x, u)
+		t.Errorf("curve.Double() gotX = %v, want %v", x, u)
 	}
 	if y.Cmp(v) != 0 {
-		t.Errorf("SIEC255Params.Double() gotY = %v, want %v", y, v)
+		t.Errorf("curve.Double() gotY = %v, want %v", y, v)
 	}
 }
 
@@ -41,10 +41,33 @@ func TestAdd(t *testing.T) {
 	u, _ := new(big.Int).SetString("15508762693928266726769396085241920452527964114034020358226683933290603861217", 10)
 	v, _ := new(big.Int).SetString("14902066091748681388520350407103675753252739566337731413744921722214701412361", 10)
 	if x.Cmp(u) != 0 {
-		t.Errorf("SIEC255Params.Add() gotX = %v, want %v", x, u)
+		t.Errorf("curve.Add() gotX = %v, want %v", x, u)
 	}
 	if y.Cmp(v) != 0 {
-		t.Errorf("SIEC255Params.Add() gotY = %v, want %v", y, v)
+		t.Errorf("curve.Add() gotY = %v, want %v", y, v)
+	}
+}
+
+func TestIsOnCurve(t *testing.T) {
+	curve := SIEC255()
+	x, _ := new(big.Int).SetString("5", 10)
+	y, _ := new(big.Int).SetString("12", 10)
+	if !curve.IsOnCurve(x, y) {
+		t.Errorf("curve.IsOnCurve() got = %v, want %v", false, true)
+	}
+	y.Add(y, big.NewInt(1))
+	if curve.IsOnCurve(x, y) {
+		t.Errorf("curve.IsOnCurve() got = %v, want %v", true, false)
+	}
+	x, _ = new(big.Int).SetString("6784692728748995825599862402855483522016546426567910438357042338075027826575", 10)
+	y, _ = new(big.Int).SetString("14982863109320699114866362806305859444453206692004135551371801829915686450358", 10)
+	if !curve.IsOnCurve(x, y) {
+		t.Errorf("curve.IsOnCurve() got = %v, want %v", false, true)
+	}
+	x, _ = new(big.Int).SetString("15508762693928266726769396085241920452527964114034020358226683933290603861217", 10)
+	y, _ = new(big.Int).SetString("14902066091748681388520350407103675753252739566337731413744921722214701412361", 10)
+	if !curve.IsOnCurve(x, y) {
+		t.Errorf("curve.IsOnCurve() got = %v, want %v", false, true)
 	}
 }
 
@@ -54,10 +77,10 @@ func TestScale(t *testing.T) {
 	u, _ := new(big.Int).SetString("22784956368772284587014129354783824301122808969944262244690262244567645543628", 10)
 	v, _ := new(big.Int).SetString("15122902039027963115899162435007755480175091927763482548168795824636596047001", 10)
 	if x.Cmp(u) != 0 {
-		t.Errorf("SIEC255Params.ScalarBaseMult() gotX = %v, want %v", x, u)
+		t.Errorf("curve.ScalarBaseMult() gotX = %v, want %v", x, u)
 	}
 	if y.Cmp(v) != 0 {
-		t.Errorf("SIEC255Params.ScalarBaseMult() gotY = %v, want %v", y, v)
+		t.Errorf("curve.ScalarBaseMult() gotY = %v, want %v", y, v)
 	}
 }
 
