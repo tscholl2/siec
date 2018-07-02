@@ -26,20 +26,36 @@ type Element [4]uint64
 
 // ElementToBigInt converts an element to a *big.Int.
 func ElementToBigInt(a Element) (z *big.Int) {
-	z = new(big.Int).SetUint64(a[3])
-	z.Add(z.Lsh(z, 64), new(big.Int).SetUint64(a[2]))
-	z.Add(z.Lsh(z, 64), new(big.Int).SetUint64(a[1]))
-	z.Add(z.Lsh(z, 64), new(big.Int).SetUint64(a[0]))
-	return z
+	return uint64ArrayToBigInt(a[:])
 }
 
 // BigIntToElement converts a big.Int to an element.
 func BigIntToElement(z *big.Int) (a Element) {
+	arr := bigIntToUint64Array(z)
+	for len(arr) < 4 {
+		arr = append(arr, 0)
+	}
+	return Element{arr[0], arr[1], arr[2], arr[3]}
+}
+
+// Transform a *big.Int to []uint64 in little-endian.
+func bigIntToUint64Array(z *big.Int) (arr []uint64) {
 	z = new(big.Int).Set(z) // Use a copy to avoid overwriting anything.
 	low64 := new(big.Int).SetUint64(0xffffffffffffffff)
-	a[0] = new(big.Int).And(z, low64).Uint64()
-	a[1] = new(big.Int).And(z.Rsh(z, 64), low64).Uint64()
-	a[2] = new(big.Int).And(z.Rsh(z, 64), low64).Uint64()
-	a[3] = new(big.Int).And(z.Rsh(z, 64), low64).Uint64()
+	for z.BitLen() > 0 {
+		arr = append(arr, new(big.Int).And(z, low64).Uint64())
+		z.Rsh(z, 64)
+	}
 	return
+}
+
+func uint64ArrayToBigInt(arr []uint64) (z *big.Int) {
+	if len(arr) == 0 {
+		return new(big.Int)
+	}
+	z = new(big.Int).SetUint64(arr[len(arr)-1])
+	for i := len(arr) - 2; i >= 0; i-- {
+		z.Add(z.Lsh(z, 64), new(big.Int).SetUint64(arr[i]))
+	}
+	return z
 }

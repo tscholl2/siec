@@ -36,18 +36,14 @@ func Test_mul256(t *testing.T) {
 
 func Test_mul256_random(t *testing.T) {
 	for i := 0; i < 100; i++ {
-		x := randomElement(2 * i)
-		y := randomElement(2*i + 1)
-		got := mul256(x, y)
-		C := new(big.Int).Mul(ElementToBigInt(x), ElementToBigInt(y))
-		var want [8]uint64
-		for i := 0; i < 8; i++ {
-			want[i] = C.Uint64()
-			C.Rsh(C, 64)
-		}
-		if got != want {
-			t.Errorf("/%d mul256(%v,%v) = %v, want %v", i, x, y, got, want)
-			t.FailNow()
+		a := randomElement(i)
+		A := ElementToBigInt(a)
+		b := randomElement(i + 1)
+		B := ElementToBigInt(b)
+		c := mul256(a, b)
+		C := new(big.Int).Mul(A, B)
+		if C.Cmp(uint64ArrayToBigInt(c[:])) != 0 {
+			t.Errorf("mul256() = %v, want %v", c, bigIntToUint64Array(C))
 		}
 	}
 }
