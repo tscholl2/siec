@@ -67,25 +67,28 @@ func BenchmarkAddP224(b *testing.B) {
 
 func BenchmarkScale(b *testing.B) {
 	curve := SIEC255()
+	k := hash(1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		curve.ScalarBaseMult(hash(1))
+		curve.ScalarBaseMult(k)
 	}
 }
 
 func BenchmarkScaleP256(b *testing.B) {
 	curve := elliptic.P256()
+	k := hash(1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		curve.ScalarBaseMult(hash(1))
+		curve.ScalarBaseMult(k)
 	}
 }
 
 func BenchmarkScaleP224(b *testing.B) {
 	curve := elliptic.P224()
+	k := hash(1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		curve.ScalarBaseMult(hash(i))
+		curve.ScalarBaseMult(k)
 	}
 }
 

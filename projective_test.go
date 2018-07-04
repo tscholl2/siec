@@ -86,7 +86,8 @@ func Test_projectiveScalarBaseMult(t *testing.T) {
 func BenchmarkScale_projective(b *testing.B) {
 	curve := SIEC255()
 	b.ResetTimer()
+	k := hash(1)
 	for i := 0; i < b.N; i++ {
-		curve.projectiveScalarBaseMult(hash(1))
+		curve.projectiveScalarBaseMult(k)
 	}
 }
