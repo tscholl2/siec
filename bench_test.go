@@ -2,7 +2,7 @@ package siec
 
 import (
 	"crypto/elliptic"
-	"crypto/sha512"
+	"crypto/sha256"
 	"testing"
 
 	"github.com/tscholl2/siec/edwards25519"
@@ -10,7 +10,7 @@ import (
 
 func BenchmarkDouble(b *testing.B) {
 	curve := SIEC255()
-	x, y := curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41, 0xff})
+	x, y := curve.ScalarBaseMult(hash(1))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		curve.Double(x, y)
@@ -19,7 +19,7 @@ func BenchmarkDouble(b *testing.B) {
 
 func BenchmarkDoubleP256(b *testing.B) {
 	curve := elliptic.P256()
-	x, y := curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41, 0xff})
+	x, y := curve.ScalarBaseMult(hash(1))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		curve.Double(x, y)
@@ -28,7 +28,7 @@ func BenchmarkDoubleP256(b *testing.B) {
 
 func BenchmarkDoubleP224(b *testing.B) {
 	curve := elliptic.P224()
-	x, y := curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41, 0xff})
+	x, y := curve.ScalarBaseMult(hash(1))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		curve.Double(x, y)
@@ -37,8 +37,8 @@ func BenchmarkDoubleP224(b *testing.B) {
 
 func BenchmarkAdd(b *testing.B) {
 	curve := SIEC255()
-	x1, y1 := curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41, 0xff})
-	x2, y2 := curve.ScalarBaseMult([]byte{0x40, 0x10, 0x41, 0xff})
+	x1, y1 := curve.ScalarBaseMult(hash(1))
+	x2, y2 := curve.ScalarBaseMult(hash(2))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		curve.Add(x1, y1, x2, y2)
@@ -47,8 +47,8 @@ func BenchmarkAdd(b *testing.B) {
 
 func BenchmarkAddP256(b *testing.B) {
 	curve := elliptic.P256()
-	x1, y1 := curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41, 0xff})
-	x2, y2 := curve.ScalarBaseMult([]byte{0x40, 0x10, 0x41, 0xff})
+	x1, y1 := curve.ScalarBaseMult(hash(1))
+	x2, y2 := curve.ScalarBaseMult(hash(2))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		curve.Add(x1, y1, x2, y2)
@@ -57,8 +57,8 @@ func BenchmarkAddP256(b *testing.B) {
 
 func BenchmarkAddP224(b *testing.B) {
 	curve := elliptic.P224()
-	x1, y1 := curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41, 0xff})
-	x2, y2 := curve.ScalarBaseMult([]byte{0x40, 0x10, 0x41, 0xff})
+	x1, y1 := curve.ScalarBaseMult(hash(1))
+	x2, y2 := curve.ScalarBaseMult(hash(2))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		curve.Add(x1, y1, x2, y2)
@@ -69,7 +69,7 @@ func BenchmarkScale(b *testing.B) {
 	curve := SIEC255()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41, 0xff})
+		curve.ScalarBaseMult(hash(1))
 	}
 }
 
@@ -77,7 +77,7 @@ func BenchmarkScaleP256(b *testing.B) {
 	curve := elliptic.P256()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41, 0xff})
+		curve.ScalarBaseMult(hash(1))
 	}
 }
 
@@ -85,20 +85,25 @@ func BenchmarkScaleP224(b *testing.B) {
 	curve := elliptic.P224()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		curve.ScalarBaseMult([]byte{0x40, 0x0, 0x41, 0xff})
+		curve.ScalarBaseMult(hash(i))
 	}
 }
 
 func BenchmarkScaleEd25519(b *testing.B) {
-	digest := sha512.Sum512([]byte{0x40, 0x0, 0x41, 0xff})
-	digest[0] &= 248
-	digest[31] &= 127
-	digest[31] |= 64
+	arr := hash(1)
+	arr[0] &= 248
+	arr[31] &= 127
+	arr[31] |= 64
 	var A edwards25519.ExtendedGroupElement
 	var hBytes [32]byte
-	copy(hBytes[:], digest[:])
+	copy(hBytes[:], arr)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		edwards25519.GeScalarMultBase(&A, &hBytes)
 	}
+}
+
+func hash(i int) []byte {
+	arr := sha256.Sum256([]byte{byte(i)})
+	return arr[:]
 }

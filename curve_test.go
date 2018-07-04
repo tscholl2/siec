@@ -2,7 +2,6 @@ package siec
 
 import (
 	"crypto/elliptic"
-	"crypto/rand"
 	"math/big"
 	"reflect"
 	"testing"
@@ -88,11 +87,11 @@ func TestScaleP256(t *testing.T) {
 	// Sage:
 	// P256 = EllipticCurve(GF(115792089210356248762697446949407573530086143415290314195533631308867097853951),[-3,0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b])
 	// G = P256([0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296,0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5])
-	// 0x40*G
+	// 0x4001*G
 	curve := elliptic.P256()
-	x, y := curve.ScalarBaseMult([]byte{0x40})
-	u, _ := new(big.Int).SetString("4534198767316794591643245143622298809742628679895448054572722918996032022405", 10)
-	v, _ := new(big.Int).SetString("38538856030597174617352966265796180312895426960288118979288294421866280361154", 10)
+	x, y := curve.ScalarBaseMult([]byte{0x40, 0x1})
+	u, _ := new(big.Int).SetString("72695894326801153147216665794252886088922051068954702128373097767796982305416", 10)
+	v, _ := new(big.Int).SetString("115052900738981503025783750032562471330247412874189631362047844261308430634379", 10)
 	if x.Cmp(u) != 0 {
 		t.Errorf("P256.ScalarBaseMult() gotX = %v, want %v", x, u)
 	}
@@ -116,7 +115,7 @@ func TestLiftX(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotX, gotY := LiftX(tt.args.X)
+			gotX, gotY := curve.liftX(tt.args.X)
 			if !reflect.DeepEqual(gotX, tt.wantX) {
 				t.Errorf("LiftX() gotX = %v, want %v", gotX, tt.wantX)
 			}
@@ -128,16 +127,17 @@ func TestLiftX(t *testing.T) {
 }
 
 func TestCompress(t *testing.T) {
+	curve := SIEC255()
 	var x1, y1, x2, y2 *big.Int
 	x1, _ = new(big.Int).SetString("5", 10)
 	y1, _ = new(big.Int).SetString("12", 10)
-	x2, y2 = Decompress(Compress(x1, y1))
+	x2, y2 = curve.Decompress(curve.Compress(x1, y1))
 	if x2.Cmp(x1) != 0 || y2.Cmp(y1) != 0 {
 		t.Errorf("(%v,%v) did not compress/decompress correctly, got (%v,%v)", x1, y1, x2, y2)
 	}
 	x1, _ = new(big.Int).SetString("6784692728748995825599862402855483522016546426567910438357042338075027826575", 10)
 	y1, _ = new(big.Int).SetString("14982863109320699114866362806305859444453206692004135551371801829915686450358", 10)
-	x2, y2 = Decompress(Compress(x1, y1))
+	x2, y2 = curve.Decompress(curve.Compress(x1, y1))
 	if x2.Cmp(x1) != 0 || y2.Cmp(y1) != 0 {
 		t.Errorf("(%v,%v) did not compress/decompress correctly, got (%v,%v)", x1, y1, x2, y2)
 	}
@@ -145,11 +145,9 @@ func TestCompress(t *testing.T) {
 
 func TestCompressRandom(t *testing.T) {
 	curve := SIEC255()
-	b := make([]byte, 32)
 	for i := 0; i < 10; i++ {
-		rand.Read(b)
-		x1, y1 := curve.ScalarBaseMult(b)
-		x2, y2 := Decompress(Compress(x1, y1))
+		x1, y1 := curve.ScalarBaseMult(hash(i))
+		x2, y2 := curve.Decompress(curve.Compress(x1, y1))
 		if x2.Cmp(x1) != 0 || y2.Cmp(y1) != 0 {
 			t.Errorf("(%v,%v) did not compress/decompress correctly, got (%v,%v)", x1, y1, x2, y2)
 		}

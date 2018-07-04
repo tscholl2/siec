@@ -56,32 +56,25 @@ func (curve *SIEC255Params) Add(x1, y1, x2, y2 *big.Int) (x3, y3 *big.Int) {
 	if x1.Cmp(x2) == 0 && y1.Cmp(y2) == 0 {
 		return curve.Double(x1, y1)
 	}
-	X1, Y1, _ := affineToProjective(x1, y1)
-	X2, Y2, _ := affineToProjective(x2, y2)
-	X3, Y3, Z3 := curve.mmadd2007bl_opt(X1, Y1, X2, Y2)
-	x3, y3 = projectiveToAffine(X3, Y3, Z3)
-	/*
-		// TODO: optimize
-		// λ = (y2 - y1)/(x2 - x1)
-		z := new(big.Int).Sub(x2, x1)
-		lambda := new(big.Int).Sub(y2, y1)
-		z.Mod(z, curve.P)
-		if z.BitLen() == 0 {
-			return z.Set(zero), lambda.Set(zero)
-		}
-		z.ModInverse(z, curve.P)
-		lambda.Mul(lambda, z)
-		lambda.Mod(lambda, curve.P)
-		// x3 = λ² - x1 - x2
-		x3 = new(big.Int).Exp(lambda, two, curve.P)
-		x3.Sub(x3, z.Add(x1, x2))
-		x3.Mod(x3, curve.P)
-		// y = λ(x1 - x3) - y1
-		y3 = new(big.Int).Mul(lambda, z.Sub(x1, x3))
-		y3.Mod(y3, curve.P)
-		y3.Sub(y3, y1)
-		y3.Mod(y3, curve.P)
-	*/
+	// TODO: optimize
+	// λ = (y2 - y1)/(x2 - x1)
+	z := new(big.Int).Sub(x2, x1)
+	lambda := new(big.Int).Sub(y2, y1)
+	if z.BitLen() == 0 {
+		return z.Set(zero), lambda.Set(zero)
+	}
+	z.ModInverse(z, curve.P)
+	lambda.Mul(lambda, z)
+	lambda.Mod(lambda, curve.P)
+	// x3 = λ² - x1 - x2
+	x3 = new(big.Int).Exp(lambda, two, curve.P)
+	x3.Sub(x3, z.Add(x1, x2))
+	x3.Mod(x3, curve.P)
+	// y = λ(x1 - x3) - y1
+	y3 = new(big.Int).Mul(lambda, z.Sub(x1, x3))
+	y3.Mod(y3, curve.P)
+	y3.Sub(y3, y1)
+	y3.Mod(y3, curve.P)
 	return
 }
 
@@ -89,11 +82,6 @@ func (curve *SIEC255Params) Add(x1, y1, x2, y2 *big.Int) (x3, y3 *big.Int) {
 func (curve *SIEC255Params) Double(x1, y1 *big.Int) (x3, y3 *big.Int) {
 	x3 = new(big.Int)
 	y3 = new(big.Int)
-	/*
-		X1, Y1, Z1 := affineToProjective(x1, y1)
-		X3, Y3, Z3 := dbl2009l(X1, Y1, Z1)
-		x3, y3 = projectiveToAffine(X3, Y3, Z3)
-	*/
 	// TODO: optimize
 	// λ = (3x1^2)/(2y1)
 	lambda := new(big.Int).Mul(three, x3.Exp(x1, two, curve.P))
@@ -128,24 +116,6 @@ func (curve *SIEC255Params) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int
 		}
 	}
 	return x, y
-	/*
-			X1, Y1, Z1 := affineToProjective(x1, y1)
-			X2, Y2, Z2 := new(big.Int), new(big.Int), new(big.Int)
-			for _, b := range k {
-			for bitNum := 0; bitNum < 8; bitNum++ {
-				X2, Y2, Z2 = dbl2009l(X2, Y2, Z2)
-				if b&0x80 == 0x80 { // if top bit set
-					X2, Y2, Z2 = add2007bl(X1, Y1, Z1, X2, Y2, Z2)
-				}
-				X2.Mod(X2, curve.P)
-				Y2.Mod(Y2, curve.P)
-				Z2.Mod(Z2, curve.P)
-				b <<= 1
-			}
-		}
-		x, y = projectiveToAffine(X2, Y2, Z2)
-		return
-	*/
 }
 
 // ScalarBaseMult returns k*G, where G is the base point of the group
@@ -154,35 +124,34 @@ func (curve *SIEC255Params) ScalarBaseMult(k []byte) (x, y *big.Int) {
 	return curve.ScalarMult(curve.Gx, curve.Gy, k)
 }
 
-// LiftX returns a point on the curve (x,y) with the given x-value.
+// liftX returns a point on the curve (x,y) with the given x-value.
 // If there is more than one, it returns the one whose y-value
 // is smaller in the interval [0,p). If no such point exists,
 // then this function panics.
-func LiftX(X *big.Int) (x, y *big.Int) {
-	params := SIEC255().Params()
+func (curve *SIEC255Params) liftX(X *big.Int) (x, y *big.Int) {
 	// y² = x³ + Ax + B
 	x = new(big.Int).Set(X)
 	y = new(big.Int)
-	y.Exp(x, three, params.P)
-	y.Add(y, new(big.Int).Mul(x, params.A))
-	y.Mod(y, params.P)
-	y.Add(y, params.B)
-	y.Mod(y, params.P)
-	y = y.ModSqrt(y, params.P)
+	y.Exp(x, three, curve.P)
+	y.Add(y, new(big.Int).Mul(x, curve.A))
+	y.Mod(y, curve.P)
+	y.Add(y, curve.B)
+	y.Mod(y, curve.P)
+	y = y.ModSqrt(y, curve.P)
 	if y == nil {
 		panic(fmt.Sprintf("%d is not a point on the curve", X))
 	}
-	if y.Cmp(new(big.Int).Sub(params.P, y)) > 0 {
-		y.Sub(params.P, y)
+	if y.Cmp(new(big.Int).Sub(curve.P, y)) > 0 {
+		y.Sub(curve.P, y)
 	}
 	return x, y
 }
 
 // Compress compresses a point down to 32 bytes.
-// The first 31 bits (index 0,1,2, and most of 3)
+// The first 31 bytes (index 0,1,2, and most of 3)
 // represent the x coordinate (little endian).
 // The last bit of the fourth byte is the parity of the y coordinate.
-func Compress(x, y *big.Int) (c [32]byte) {
+func (curve *SIEC255Params) Compress(x, y *big.Int) (c [32]byte) {
 	b := reverse(x.Bytes())
 	for i := 0; i < int(math.Min(32, float64(len(b)))); i++ {
 		c[i] = b[i]
@@ -193,22 +162,14 @@ func Compress(x, y *big.Int) (c [32]byte) {
 
 // Decompress uncompresses a point and returns an
 // actual (x,y) pair.
-func Decompress(c [32]byte) (x, y *big.Int) {
-	params := SIEC255().Params()
+func (curve *SIEC255Params) Decompress(c [32]byte) (x, y *big.Int) {
 	s := c[31] >> 7
 	c[31] = c[31] & 0x7f
-	x, y = LiftX(new(big.Int).SetBytes(reverse(c[:])))
+	x, y = curve.liftX(new(big.Int).SetBytes(reverse(c[:])))
 	if y.Bit(0) != uint(s) {
-		y.Sub(params.P, y)
+		y.Sub(curve.P, y)
 	}
 	return
-}
-
-func reverse(s []byte) []byte {
-	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
-		s[i], s[j] = s[j], s[i]
-	}
-	return s
 }
 
 var siec255 *SIEC255Params
@@ -235,9 +196,8 @@ var mask = []byte{0xff, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f}
 // GenerateKey returns a public/private key pair. The private key is
 // generated using the given reader, which must return random data.
 // This is copied from https://golang.org/src/crypto/elliptic/elliptic.go?s=7368:7453#L266
-func GenerateKey(rand io.Reader) (k []byte, x, y *big.Int, err error) {
-	curve := SIEC255()
-	N := curve.Params().N
+func (curve *SIEC255Params) GenerateKey(rand io.Reader) (k []byte, x, y *big.Int, err error) {
+	N := curve.N
 	bitSize := N.BitLen()
 	byteLen := (bitSize + 7) >> 3
 	k = make([]byte, byteLen)
@@ -261,6 +221,9 @@ func GenerateKey(rand io.Reader) (k []byte, x, y *big.Int, err error) {
 	return
 }
 
-func main() {
-	fmt.Println("hello")
+func reverse(s []byte) []byte {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+	return s
 }

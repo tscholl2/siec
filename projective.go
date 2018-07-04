@@ -4,46 +4,27 @@ import (
 	"math/big"
 )
 
-func affineToProjective(x, y *big.Int) (X, Y, Z *big.Int) {
-	return new(big.Int).Set(x), new(big.Int).Set(y), big.NewInt(1)
-}
-
-// copies from https://golang.org/src/crypto/elliptic/elliptic.go
-func projectiveToAffine(x, y, z *big.Int) (X, Y *big.Int) {
-	curve := SIEC255()
-	if z.Sign() == 0 {
-		return new(big.Int), new(big.Int)
-	}
-	zinv := new(big.Int).ModInverse(z, curve.P)
-	zinvsq := new(big.Int).Mul(zinv, zinv)
-	X = new(big.Int).Mul(x, zinvsq)
+func (curve *SIEC255Params) affineToProjective(x, y *big.Int) (X, Y, Z *big.Int) {
+	X, Y, Z = new(big.Int), new(big.Int), new(big.Int)
+	X.Set(x)
 	X.Mod(X, curve.P)
-	Y = new(big.Int).Mul(y, zinvsq.Mul(zinvsq, zinv))
+	Y.Set(y)
 	Y.Mod(Y, curve.P)
+	Z.SetInt64(1)
 	return
 }
 
-// assumes Z1 = Z2 = 1.
-func (curve *SIEC255Params) mmadd2007bl_opt(X1, Y1, X2, Y2 *big.Int) (X3, Y3, Z3 *big.Int) {
-	X3, Y3, Z3 = new(big.Int), new(big.Int), new(big.Int)
-	w := new(big.Int)
-	// H = X2-X1
-	H := Z3.Sub(X2, X1)
-	// HH = H^2
-	// I = 4*HH
-	I := Y3.Lsh(w.Mul(H, H), 2)
-	// J = H*I
-	J := new(big.Int).Mul(H, I)
-	// V = X1*I
-	V := new(big.Int).Mul(X1, I)
-	// r = 2*(Y2-Y1)
-	r := I.Lsh(w.Sub(Y2, Y1), 1)
-	// X3 = r^2-J-2*V
-	X3.Sub(w.Mul(r, r), X3.Add(J, X3.Lsh(V, 1)))
-	// Y3 = r*(V-X3)-2*Y1*J
-	Y3.Sub(w.Mul(r, w.Sub(V, X3)), Y3.Lsh(Y3.Mul(Y1, J), 1))
-	// Z3 = 2*H
-	Z3.Lsh(H, 1)
+func (curve *SIEC255Params) projectiveToAffine(X, Y, Z *big.Int) (x, y *big.Int) {
+	x, y = new(big.Int), new(big.Int)
+	if Z.Sign() == 0 {
+		return new(big.Int), new(big.Int)
+	}
+	Zinv := new(big.Int).ModInverse(Z, curve.P)
+	Zinvsq := new(big.Int).Mul(Zinv, Zinv)
+	x.Mul(X, Zinvsq)
+	x.Mod(x, curve.P)
+	y.Mul(Y, Zinvsq.Mul(Zinvsq, Zinv))
+	y.Mod(y, curve.P)
 	return
 }
 
@@ -60,13 +41,18 @@ func (curve *SIEC255Params) mmadd2007bl(X1, Y1, X2, Y2 *big.Int) (X3, Y3, Z3 *bi
 	// J = H*I
 	J := new(big.Int).Mul(H, I)
 	// r = 2*(Y2-Y1)
-	r := new(big.Int).Lsh(w.Sub(Y2, Y1), 1)
+	w.Sub(Y2, Y1)
+	r := new(big.Int).Lsh(w, 1)
 	// V = X1*I
 	V := new(big.Int).Mul(X1, I)
 	// X3 = r^2-J-2*V
-	X3 = new(big.Int).Sub(w.Mul(r, r), ww.Add(J, ww.Lsh(V, 1)))
+	w.Mul(r, r)
+	ww.Add(J, ww.Lsh(V, 1))
+	X3 = new(big.Int).Sub(w, ww)
 	// Y3 = r*(V-X3)-2*Y1*J
-	Y3 = new(big.Int).Sub(w.Mul(r, w.Sub(V, X3)), ww.Lsh(ww.Mul(Y1, J), 1))
+	w.Mul(r, w.Sub(V, X3))
+	ww.Lsh(ww.Mul(Y1, J), 1)
+	Y3 = new(big.Int).Sub(w, ww)
 	// Z3 = 2*H
 	Z3 = new(big.Int).Lsh(H, 1)
 	return
@@ -74,6 +60,12 @@ func (curve *SIEC255Params) mmadd2007bl(X1, Y1, X2, Y2 *big.Int) (X3, Y3, Z3 *bi
 
 // http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-add-2001-b
 func (curve *SIEC255Params) add2007bl(X1, Y1, Z1, X2, Y2, Z2 *big.Int) (X3, Y3, Z3 *big.Int) {
+	if X1.BitLen() == 0 && Y1.BitLen() == 0 && Z1.BitLen() == 0 {
+		return X2, Y2, Z2
+	}
+	if X2.BitLen() == 0 && Y2.BitLen() == 0 && Z2.BitLen() == 0 {
+		return X1, Y1, Z1
+	}
 	w := new(big.Int)
 	ww := new(big.Int)
 	// Z1Z1 = Z1^2
@@ -85,43 +77,47 @@ func (curve *SIEC255Params) add2007bl(X1, Y1, Z1, X2, Y2, Z2 *big.Int) (X3, Y3, 
 	// U2 = X2*Z1Z1
 	U2 := new(big.Int).Mul(X2, Z1Z1)
 	// S1 = Y1*Z2*Z2Z2
-	S1 := new(big.Int).Mul(Y1, w.Mul(Z2, Z2Z2))
+	w.Mul(Z2, Z2Z2)
+	S1 := new(big.Int).Mul(Y1, w)
 	// S2 = Y2*Z1*Z1Z1
-	S2 := new(big.Int).Mul(Y2, w.Mul(Z1, Z1Z1))
+	w.Mul(Z1, Z1Z1)
+	S2 := new(big.Int).Mul(Y2, w)
 	// H = U2-U1
 	H := new(big.Int).Sub(U2, U1)
 	// I = (2*H)^2
-	I := new(big.Int).Mul(ww, ww.Lsh(H, 1))
+	ww.Lsh(H, 1)
+	I := new(big.Int).Mul(ww, ww)
 	// J = H*I
 	J := new(big.Int).Mul(H, I)
 	// r = 2*(S2-S1)
-	r := new(big.Int).Lsh(w.Sub(S2, S1), 1)
+	w.Sub(S2, S1)
+	r := new(big.Int).Lsh(w, 1)
 	// V = U1*I
 	V := new(big.Int).Mul(U1, I)
 	// X3 = r^2-J-2*V
-	X3 = new(big.Int).Sub(
-		w.Mul(r, r),
-		ww.Add(
-			J,
-			ww.Lsh(V, 1),
-		),
-	)
+	w.Mul(r, r)
+	ww.Lsh(V, 1)
+	ww.Add(J, ww)
+	X3 = new(big.Int).Sub(w, ww)
+	X3.Mod(X3, curve.P)
 	// Y3 = r*(V-X3)-2*S1*J
-	Y3 = new(big.Int).Sub(
-		w.Mul(r, w.Sub(V, X3)),
-		ww.Lsh(ww.Mul(S1, J), 1),
-	)
+	w.Sub(V, X3)
+	w.Mul(r, w)
+	ww.Mul(S1, J)
+	ww.Lsh(ww, 1)
+	Y3 = new(big.Int).Sub(w, ww)
+	Y3.Mod(Y3, curve.P)
 	// Z3 = ((Z1+Z2)^2-Z1Z1-Z2Z2)*H
-	Z3 = new(big.Int).Mul(
-		w.Sub(
-			w.Mul(w.Add(Z1, Z2), w),
-			ww.Add(Z1Z1, Z2Z2),
-		),
-		H,
-	)
+	w.Add(Z1, Z2)
+	w.Mul(w, w)
+	ww.Add(Z1Z1, Z2Z2)
+	w.Sub(w, ww)
+	Z3 = new(big.Int).Mul(w, H)
+	Z3.Mod(Z3, curve.P)
 	return
 }
 
+// http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-l
 func (curve *SIEC255Params) dbl2009l(X1, Y1, Z1 *big.Int) (X3, Y3, Z3 *big.Int) {
 	w := new(big.Int)
 	m := new(big.Int)
@@ -154,4 +150,23 @@ func (curve *SIEC255Params) dbl2009l(X1, Y1, Z1 *big.Int) (X3, Y3, Z3 *big.Int) 
 	Z3 = w.Lsh(w.Mul(Z1, Y1), 1)
 	Z3.Mod(Z3, curve.P)
 	return
+}
+
+func (curve *SIEC255Params) projectiveScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
+	Bz := new(big.Int).SetInt64(1)
+	x, y, z := new(big.Int), new(big.Int), new(big.Int)
+	for _, byte := range k {
+		for bitNum := 0; bitNum < 8; bitNum++ {
+			x, y, z = curve.dbl2009l(x, y, z)
+			if byte&0x80 == 0x80 {
+				x, y, z = curve.add2007bl(Bx, By, Bz, x, y, z)
+			}
+			byte <<= 1
+		}
+	}
+	return curve.projectiveToAffine(x, y, z)
+}
+
+func (curve *SIEC255Params) projectiveScalarBaseMult(k []byte) (*big.Int, *big.Int) {
+	return curve.projectiveScalarMult(curve.Gx, curve.Gy, k)
 }
