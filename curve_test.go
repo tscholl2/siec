@@ -153,3 +153,73 @@ func TestCompressRandom(t *testing.T) {
 		}
 	}
 }
+
+func TestScalarMult2Random(t *testing.T) {
+	curve := SIEC255()
+	for i := 0; i < 10; i++ {
+		x, y := curve.ScalarBaseMult(hash(i))
+		u, v := curve.scalarMult2(curve.Gx, curve.Gy, hash(i))
+		if x.Cmp(u) != 0 || y.Cmp(v) != 0 {
+			t.Errorf("wanted (%v,%v), got (%v,%v)", x, y, u, v)
+		}
+	}
+}
+
+func TestEndomorphism(t *testing.T) {
+	curve := SIEC255()
+	x, y := curve.Gx, curve.Gy
+	u, _ := new(big.Int).SetString("28948022309329048855892746252183396359753225502720738378331610790540530405116", 10)
+	v, _ := new(big.Int).SetString("28948022309329048855892746252183396360603931420023084536990047309120118726709", 10)
+	x, y = curve.phi(x, y)
+	if x.Cmp(u) != 0 {
+		t.Errorf("curve.ScalarBaseMult() gotX = %v, want %v", x, u)
+	}
+	if y.Cmp(v) != 0 {
+		t.Errorf("curve.ScalarBaseMult() gotY = %v, want %v", y, v)
+	}
+	u, _ = new(big.Int).SetString("850705917302346158658436518579588321600", 10)
+	v, _ = new(big.Int).SetString("12", 10)
+	x, y = curve.phi(x, y)
+	if x.Cmp(u) != 0 {
+		t.Errorf("curve.ScalarBaseMult() gotX = %v, want %v", x, u)
+	}
+	if y.Cmp(v) != 0 {
+		t.Errorf("curve.ScalarBaseMult() gotY = %v, want %v", y, v)
+	}
+	u, _ = new(big.Int).SetString("5", 10)
+	v, _ = new(big.Int).SetString("28948022309329048855892746252183396360603931420023084536990047309120118726709", 10)
+	x, y = curve.phi(x, y)
+	if x.Cmp(u) != 0 {
+		t.Errorf("curve.ScalarBaseMult() gotX = %v, want %v", x, u)
+	}
+	if y.Cmp(v) != 0 {
+		t.Errorf("curve.ScalarBaseMult() gotY = %v, want %v", y, v)
+	}
+	u, _ = new(big.Int).SetString("28948022309329048855892746252183396359753225502720738378331610790540530405116", 10)
+	v, _ = new(big.Int).SetString("12", 10)
+	x, y = curve.phi(x, y)
+	if x.Cmp(u) != 0 {
+		t.Errorf("curve.ScalarBaseMult() gotX = %v, want %v", x, u)
+	}
+	if y.Cmp(v) != 0 {
+		t.Errorf("curve.ScalarBaseMult() gotY = %v, want %v", y, v)
+	}
+	u, _ = new(big.Int).SetString("850705917302346158658436518579588321600", 10)
+	v, _ = new(big.Int).SetString("28948022309329048855892746252183396360603931420023084536990047309120118726709", 10)
+	x, y = curve.phi(x, y)
+	if x.Cmp(u) != 0 {
+		t.Errorf("curve.ScalarBaseMult() gotX = %v, want %v", x, u)
+	}
+	if y.Cmp(v) != 0 {
+		t.Errorf("curve.ScalarBaseMult() gotY = %v, want %v", y, v)
+	}
+	u, _ = new(big.Int).SetString("5", 10)
+	v, _ = new(big.Int).SetString("12", 10)
+	x, y = curve.phi(x, y)
+	if x.Cmp(u) != 0 {
+		t.Errorf("curve.ScalarBaseMult() gotX = %v, want %v", x, u)
+	}
+	if y.Cmp(v) != 0 {
+		t.Errorf("curve.ScalarBaseMult() gotY = %v, want %v", y, v)
+	}
+}

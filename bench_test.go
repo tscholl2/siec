@@ -74,6 +74,15 @@ func BenchmarkScale(b *testing.B) {
 	}
 }
 
+func BenchmarkScale2(b *testing.B) {
+	curve := SIEC255()
+	k := hash(1)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		curve.scalarMult2(curve.Gx, curve.Gy, k)
+	}
+}
+
 func BenchmarkScaleP256(b *testing.B) {
 	curve := elliptic.P256()
 	k := hash(1)

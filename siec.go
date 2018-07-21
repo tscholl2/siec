@@ -103,6 +103,62 @@ func (curve *SIEC255Params) Double(x1, y1 *big.Int) (x3, y3 *big.Int) {
 	return
 }
 
+var (
+	phiX, _ = new(big.Int).SetString("4000000000000000000000000200104000000000000000000004004101081000", 16)
+)
+
+// Order 6 endomorphism.
+func (curve *SIEC255Params) phi(x1, y1 *big.Int) (x2, y2 *big.Int) {
+	x2 = new(big.Int).Mul(phiX, x1)
+	x2.Mod(x2, curve.P)
+	y2 = new(big.Int).Neg(y1)
+	y2.Mod(y2, curve.P)
+	return
+}
+
+var (
+	endK, _ = new(big.Int).SetString("80000000000000000000000002001040", 16)
+)
+
+func (curve *SIEC255Params) scalarMult2(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
+	z := new(big.Int).SetBytes(k)
+	r := new(big.Int)
+	z.QuoRem(z, endK, r)
+	zb := z.Bytes()
+	rb := r.Bytes()
+	for len(zb) != len(rb) {
+		if len(zb) < len(rb) {
+			zb = append([]byte{0}, zb...)
+		} else {
+			rb = append([]byte{0}, rb...)
+		}
+	}
+
+	x2, y2 := curve.phi(x1, y1)
+	x3, y3 := curve.Add(x1, y1, x2, y2)
+
+	x, y = new(big.Int), new(big.Int)
+	for i := range zb {
+		b1, b2 := zb[i], rb[i]
+		for bitNum := 0; bitNum < 8; bitNum++ {
+			x, y = curve.Double(x, y)
+			if b1&0x80 == 0x80 && b2&0x80 == 0x80 { // if top bit set
+				x, y = curve.Add(x, y, x3, y3)
+			} else if b1&0x80 == 0x80 && b2&0x80 != 0x80 {
+				x, y = curve.Add(x, y, x2, y2)
+			} else if b1&0x80 != 0x80 && b2&0x80 == 0x80 {
+				x, y = curve.Add(x, y, x1, y1)
+			} else if b1&0x80 != 0x80 && b2&0x80 != 0x80 {
+				// pass
+			}
+			b1 <<= 1
+			b2 <<= 1
+		}
+	}
+
+	return
+}
+
 // ScalarMult returns k*(Bx,By) where k is a number in big-endian form.
 func (curve *SIEC255Params) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
 	x, y = new(big.Int), new(big.Int)

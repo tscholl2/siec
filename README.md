@@ -12,6 +12,7 @@ pi = 2^127 + 2^25 + 2^12 + 2^6 + (1 - isqrt3)/2
 p = ZZ(pi.norm())
 N = ZZ((pi-1).norm())
 E = EllipticCurve(GF(p),[0,19]) # E: y^2 = x^3 + 19
+G = E([5,12])
 # p is a 255 bit prime with hamming weight 14
 assert p.is_prime()
 assert len(p.bits()) == 255
@@ -27,4 +28,7 @@ assert E.frobenius_polynomial() == pi.minpoly()
 assert K.order([pi]).is_maximal()
 # K has class number 1
 assert K.class_number() == 1
+# Examples of order 6 endomorphisms
+assert E([28948022309329048855892746252183396360433790236562615305258360005404201062400*G[0],-G[1]]) == 170141183460469231731687303715917664320*G
+assert 170141183460469231731687303715917664320^3 % N == N-1
 ```
