@@ -2,64 +2,70 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"math/big"
+	"sort"
+	"sync"
 )
-
-var (
-	_D  = []*big.Int{big.NewInt(3), big.NewInt(4), big.NewInt(7), big.NewInt(8), big.NewInt(11), big.NewInt(19), big.NewInt(43), big.NewInt(67), big.NewInt(163)}
-	one = big.NewInt(1)
-	two = big.NewInt(2)
-)
-
-func test(t *big.Int, q *big.Int) bool {
-	for _, d := range _D {
-		q.Exp(t, two, nil)
-		q.Add(q, d)
-		if q.Bits()[0]&3 != 0 {
-			continue
-		}
-		q.Rsh(q, 2)
-		// TODO: check if q is a prime power
-		if q.ProbablyPrime(20) {
-			return true
-		}
-	}
-	return false
-}
-
-func nextSiec(M *big.Int) (t, q *big.Int) {
-	t = new(big.Int)
-	q = new(big.Int)
-	t.Lsh(M, 2)
-	t.Sub(t, _D[8])
-	t.Sqrt(t)
-	t.Sub(t, one)
-	for {
-		if test(t, q) && q.Cmp(M) > 0 {
-			return
-		}
-		t.Add(t, one)
-	}
-}
-
-func prevSiec(M *big.Int) (t, q *big.Int) {
-	t = new(big.Int)
-	q = new(big.Int)
-	t.Lsh(M, 2)
-	t.Sub(t, _D[0])
-	t.Sqrt(t)
-	t.Add(t, one)
-	for {
-		if test(t, q) && q.Cmp(M) < 0 {
-			return
-		}
-		t.Sub(t, one)
-	}
-}
 
 func main() {
-	M := new(big.Int)
-	M.SetString("10000000000", 10)
-	t, q := nextSiec(M)
-	fmt.Printf("t = %d\nq = %d\n", t, q)
+	// build results
+	var results [][2]*big.Int
+	M := new(big.Int).Lsh(one, 256)
+	var mutex = &sync.Mutex{}
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(255)
+	for j := 0; j < 255; j++ {
+		go func(j int) {
+			defer waitGroup.Done()
+			Mj := new(big.Int).Lsh(one, uint(j))
+			Mj.Sub(M, Mj)
+			q1, t1 := nextSiec(Mj)
+			q2, t2 := prevSiec(Mj)
+			Mj = new(big.Int).Lsh(one, uint(j))
+			Mj.Sub(M, Mj)
+			q3, t3 := nextSiec(Mj)
+			q4, t4 := prevSiec(Mj)
+			mutex.Lock()
+			results = append(
+				results,
+				[2]*big.Int{q1, t1},
+				[2]*big.Int{q2, t2},
+				[2]*big.Int{q3, t3},
+				[2]*big.Int{q4, t4},
+			)
+			mutex.Unlock()
+		}(j)
+	}
+	waitGroup.Wait()
+	// filter results
+	var newResults [][2]*big.Int
+	for _, r := range results {
+		N := new(big.Int).Add(r[0], big.NewInt(1))
+		N.Sub(N, r[1])
+		if N.ProbablyPrime(20) {
+			newResults = append(newResults, r)
+		}
+	}
+	results = newResults
+	// rank results
+	sort.Slice(results, func(i int, j int) bool {
+		n1 := results[i][0].BitLen()
+		c1 := popCount(results[i][0])
+		n2 := results[j][0].BitLen()
+		c2 := popCount(results[j][0])
+		return math.Abs(float64(n1-2*int(c1))) < math.Abs(float64(n2-2*int(c2)))
+	})
+	// print
+	for _, r := range results {
+		fmt.Println("q = %d\nt = %d", r[0], r[1])
+	}
+}
+
+func popCount(a *big.Int) (c uint) {
+	n := a.BitLen()
+	for i := 0; i <= n; i++ {
+		c += a.Bit(i)
+	}
+	return
 }
