@@ -29,7 +29,8 @@ func main() {
 				q, t = prevSiec(q)
 				N := new(big.Int).Add(q, big.NewInt(1))
 				N.Sub(N, t)
-				if N.ProbablyPrime(25) {
+				N2 := new(big.Int).Add(N, new(big.Int).Lsh(t, uint(1)))
+				if N.ProbablyPrime(25) || N2.ProbablyPrime(25) {
 					mutex.Lock()
 					results = append(results, [2]*big.Int{q, t})
 					mutex.Unlock()
@@ -39,16 +40,6 @@ func main() {
 		}(j)
 	}
 	waitGroup.Wait()
-	// filter results
-	var newResults [][2]*big.Int
-	for _, r := range results {
-		N := new(big.Int).Add(r[0], big.NewInt(1))
-		N.Sub(N, r[1])
-		if N.ProbablyPrime(20) {
-			newResults = append(newResults, r)
-		}
-	}
-	results = newResults
 	// rank results
 	sort.Slice(results, func(i int, j int) bool {
 		n1 := results[i][0].BitLen()
