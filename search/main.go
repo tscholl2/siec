@@ -11,26 +11,23 @@ import (
 func main() {
 	// build results
 	var results [][2]*big.Int
-	M := new(big.Int).Sub(new(big.Int).Lsh(one, 256), big.NewInt(1))
+	M := new(big.Int).Lsh(one, 256)
 	var mutex = &sync.Mutex{}
 	var waitGroup sync.WaitGroup
-	waitGroup.Add(255)
-	for j := -1; j < 10; j++ {
+	waitGroup.Add(1)
+	for j := 0; j < 1; j++ {
 		go func(j int) {
 			defer waitGroup.Done()
-			q := new(big.Int).Set(M)
-			if j >= 0 {
-				c := big.NewInt(1)
-				c.Lsh(c, uint(j))
-				q.Sub(q, c)
-			}
+			M2 := new(big.Int).Set(M)
+			c := new(big.Int).Lsh(one, uint(130))
+			M2.Sub(M2, c)
 			for {
-				var t *big.Int
-				q, t = prevSiec(q)
+				q, t := prevSiec(M2)
 				N := new(big.Int).Add(q, big.NewInt(1))
 				N.Sub(N, t)
-				N2 := new(big.Int).Add(N, new(big.Int).Lsh(t, uint(1)))
-				if N.ProbablyPrime(25) || N2.ProbablyPrime(25) {
+				N2 := new(big.Int).Add(q, big.NewInt(1))
+				N2.Add(N2, t)
+				if true || N.ProbablyPrime(25) || N2.ProbablyPrime(25) {
 					mutex.Lock()
 					results = append(results, [2]*big.Int{q, t})
 					mutex.Unlock()
@@ -50,7 +47,7 @@ func main() {
 	})
 	// print
 	for _, r := range results {
-		fmt.Printf("q = %d\nt = %d\n", r[0], r[1])
+		fmt.Printf("q = %x\nt = %x\n", r[0], r[1])
 	}
 }
 

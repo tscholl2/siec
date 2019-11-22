@@ -26,7 +26,7 @@ func test(t *big.Int, q *big.Int) bool {
 	return false
 }
 
-func nextSiec(M *big.Int) (t, q *big.Int) {
+func nextSiec(M *big.Int) (q, t *big.Int) {
 	t = new(big.Int)
 	q = new(big.Int)
 	t.Lsh(M, 2)
@@ -41,7 +41,7 @@ func nextSiec(M *big.Int) (t, q *big.Int) {
 	}
 }
 
-func prevSiec(M *big.Int) (t, q *big.Int) {
+func prevSiec(M *big.Int) (q, t *big.Int) {
 	t = new(big.Int)
 	q = new(big.Int)
 	t.Lsh(M, 2)
