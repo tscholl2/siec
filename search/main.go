@@ -14,15 +14,16 @@ func main() {
 	M := new(big.Int).Lsh(one, 256)
 	var mutex = &sync.Mutex{}
 	var waitGroup sync.WaitGroup
-	waitGroup.Add(1)
-	for j := 0; j < 1; j++ {
-		go func(j int) {
+	waitGroup.Add(255)
+	for j := uint(0); j < 255; j++ {
+		go func(j uint) {
 			defer waitGroup.Done()
 			M2 := new(big.Int).Set(M)
-			c := new(big.Int).Lsh(one, uint(130))
-			M2.Sub(M2, c)
+			M2.Sub(M2, new(big.Int).Lsh(one, j))
+			var q, t *big.Int
+			q = M2
 			for {
-				q, t := prevSiec(M2)
+				q, t = nextSiec(q)
 				N := new(big.Int).Add(q, big.NewInt(1))
 				N.Sub(N, t)
 				N2 := new(big.Int).Add(q, big.NewInt(1))
@@ -47,7 +48,7 @@ func main() {
 	})
 	// print
 	for _, r := range results {
-		fmt.Printf("q = %x\nt = %x\n", r[0], r[1])
+		fmt.Printf("q = %x\ns = %d\nt = %x\n", r[0], popCount(r[0]), r[1])
 	}
 }
 
