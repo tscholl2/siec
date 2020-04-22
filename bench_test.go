@@ -3,6 +3,8 @@ package siec
 import (
 	"crypto/elliptic"
 	"crypto/sha256"
+	"math/big"
+	"math/rand"
 	"testing"
 
 	"github.com/tscholl2/siec/edwards25519"
@@ -62,6 +64,27 @@ func BenchmarkAddP224(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		curve.Add(x1, y1, x2, y2)
+	}
+}
+
+func BenchmarkAddJacobi(b *testing.B) {
+	var P1, P2 jacobiExtendedPoint
+	r := rand.New(rand.NewSource(1))
+	P1.X = new(big.Int).Rand(r, q)
+	P1.Y = new(big.Int).Rand(r, q)
+	P1.Z = new(big.Int).Rand(r, q)
+	P1.U = new(big.Int).Rand(r, q)
+	P1.V = new(big.Int).Rand(r, q)
+	P1.W = new(big.Int).Rand(r, q)
+	P2.X = new(big.Int).Rand(r, q)
+	P2.Y = new(big.Int).Rand(r, q)
+	P2.Z = new(big.Int).Rand(r, q)
+	P2.U = new(big.Int).Rand(r, q)
+	P2.V = new(big.Int).Rand(r, q)
+	P2.W = new(big.Int).Rand(r, q)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		addExtended(P1, P2)
 	}
 }
 

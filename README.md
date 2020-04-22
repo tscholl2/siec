@@ -7,28 +7,25 @@ Over the base field 𝔽ₚ, the curve E does not admit any isogenies to other c
 We can verify the curve properties in Sage.
 
 ```python
-K.<isqrt3> = QuadraticField(-3)
-pi = 2^127 + 2^25 + 2^12 + 2^6 + (1 - isqrt3)/2
-p = ZZ(pi.norm())
-N = ZZ((pi-1).norm())
-E = EllipticCurve(GF(p),[0,19]) # E: y^2 = x^3 + 19
-G = E([5,12])
-# p is a 255 bit prime with hamming weight 14
-assert p.is_prime()
-assert len(p.bits()) == 255
-assert sum(p.bits()) == 14
-# N is a 255 bit prime
-assert N.is_prime()
-assert len(N.bits()) == 255
-# E has N points
-assert E.count_points() == N
-# The Frobenius endomorphism on E satisfies the same minimal polynomial as pi
+# Curve
+
+K.<I> = QuadraticField(-1)
+pi = I - 0xb504f333f9de6484597d89b3754aa68c
+q = ZZ(pi.norm()) # 7fffffffffffffffffffffffffffddf40a09853f04c9246b1f1c11c8ad49dc91
+assert q.is_prime()
+n = ZZ((pi-1).norm())
+assert n%2 == 0 and ZZ(n/2).is_prime()
+r = ZZ(n/2) # 3fffffffffffffffffffffffffffeefaba09b5d37c42f6b9e90b9297cbef94d5
+E = EllipticCurve(GF(q),[-12,0])
 assert E.frobenius_polynomial() == pi.minpoly()
-# pi generates a maximal order
+assert q.nbits() == 255
 assert K.order([pi]).is_maximal()
-# K has class number 1
-assert K.class_number() == 1
-# Examples of order 6 endomorphisms
-assert E([28948022309329048855892746252183396360433790236562615305258360005404201062400*G[0],-G[1]]) == 170141183460469231731687303715917664320*G
-assert 170141183460469231731687303715917664320^3 % N == N-1
+G = E([2,0x2d413cccfe779921165f626cdd52a9a30])
+assert 2*G != 0
+assert r*G == 0
+i_mod_q = 0xb504f333f9de6484597d89b3754aa68c
+assert i_mod_q^2 % q == -1 % q
+i_mod_r = 0xb504f333f9de6484597d89b3754aa68d
+assert i_mod_r^2 % r == -1 % r
+assert i_mod_r*G == E([-G[0],i_mod_q*G[1]])
 ```

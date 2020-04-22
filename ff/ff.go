@@ -6,14 +6,14 @@ import (
 
 var (
 	// p as a *big.Int.
-	pBI, _ = new(big.Int).SetString("28948022309329048855892746252183396360603931420023084536990047309120118726721", 10)
+	pBI, _ = new(big.Int).SetString("7fffffffffffffffffffffffffffddf40a09853f04c9246b1f1c11c8ad49dc91", 16)
 	// p as an Element.
-	p = Element{1126179130581057, 9223372036854775808, 33558592, 4611686018427387904}
+	p = Element{2241686268122094737, 723255720879400043, 18446744073709542900, 576460752303423487}
 )
 
 // Element represents a single element a ∈ 𝔽ₚ, where
 //
-//     p = 28948022309329048855892746252183396360603931420023084536990047309120118726721.
+//     p = 7fffffffffffffffffffffffffffddf40a09853f04c9246b1f1c11c8ad49dc91.
 //
 // Elements are represnted by an unsigned 256 bit integer.
 // This is represented by an array of four 64 bit unsigned integers.
