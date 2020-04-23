@@ -11,6 +11,11 @@ type jacobiExtendedPoint struct {
 	X, Y, Z, U, V, W *big.Int
 }
 
+func doubleExtended(P jacobiExtendedPoint) (Q jacobiExtendedPoint) {
+	// TODO
+	return
+}
+
 func addExtended(P1, P2 jacobiExtendedPoint) (P3 jacobiExtendedPoint) {
 	/*
 		T1 = U1

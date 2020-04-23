@@ -6,12 +6,43 @@ import (
 	"math/big"
 	"math/rand"
 	"testing"
-
-	"github.com/tscholl2/siec/edwards25519"
 )
 
-func BenchmarkDouble(b *testing.B) {
-	curve := SIEC255()
+func BenchmarkBigIntMultiply(b *testing.B) {
+	r := rand.New(rand.NewSource(1))
+	x := new(big.Int).Rand(r, q)
+	y := new(big.Int).Rand(r, q)
+	z := new(big.Int)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		z.Mul(x, y)
+	}
+}
+
+func BenchmarkBigIntMod(b *testing.B) {
+	r := rand.New(rand.NewSource(1))
+	x := new(big.Int).Rand(r, q)
+	y := new(big.Int).Rand(r, q)
+	z := new(big.Int).Mul(x, y)
+	w := new(big.Int)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		w.Mod(z, q)
+	}
+}
+
+func BenchmarkBigIntInvert(b *testing.B) {
+	r := rand.New(rand.NewSource(1))
+	x := new(big.Int).Rand(r, q)
+	z := new(big.Int)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		z.ModInverse(x, q)
+	}
+}
+
+func BenchmarkDoubleWeierstrass(b *testing.B) {
+	curve := Params()
 	x, y := curve.ScalarBaseMult(hash(1))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -37,8 +68,8 @@ func BenchmarkDoubleP224(b *testing.B) {
 	}
 }
 
-func BenchmarkAdd(b *testing.B) {
-	curve := SIEC255()
+func BenchmarkAddWeierstrass(b *testing.B) {
+	curve := Params()
 	x1, y1 := curve.ScalarBaseMult(hash(1))
 	x2, y2 := curve.ScalarBaseMult(hash(2))
 	b.ResetTimer()
@@ -88,24 +119,14 @@ func BenchmarkAddJacobi(b *testing.B) {
 	}
 }
 
-func BenchmarkScale(b *testing.B) {
-	curve := SIEC255()
+func BenchmarkScaleWeierstrass(b *testing.B) {
+	curve := Params()
 	k := hash(1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		curve.ScalarBaseMult(k)
 	}
 }
-
-func BenchmarkScale2(b *testing.B) {
-	curve := SIEC255()
-	k := hash(1)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		curve.scalarMult2(curve.Gx, curve.Gy, k)
-	}
-}
-
 func BenchmarkScaleP256(b *testing.B) {
 	curve := elliptic.P256()
 	k := hash(1)
@@ -121,20 +142,6 @@ func BenchmarkScaleP224(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		curve.ScalarBaseMult(k)
-	}
-}
-
-func BenchmarkScaleEd25519(b *testing.B) {
-	arr := hash(1)
-	arr[0] &= 248
-	arr[31] &= 127
-	arr[31] |= 64
-	var A edwards25519.ExtendedGroupElement
-	var hBytes [32]byte
-	copy(hBytes[:], arr)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		edwards25519.GeScalarMultBase(&A, &hBytes)
 	}
 }
 
