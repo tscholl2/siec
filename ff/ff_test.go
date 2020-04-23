@@ -7,6 +7,41 @@ import (
 	"testing"
 )
 
+func BenchmarkAdd(b *testing.B) {
+	var a Element
+	for i := 0; i < b.N; i++ {
+		Add(a, a)
+	}
+}
+
+func BenchmarkMul(b *testing.B) {
+	var a Element
+	for i := 0; i < b.N; i++ {
+		Mul(a, a)
+	}
+}
+
+func BenchmarkAddBigInt(b *testing.B) {
+	z := randomBigInt(1)
+	w := new(big.Int)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		w.Add(z, z)
+		w.Mod(w, pBI)
+	}
+}
+
+func BenchmarkMulBigInt(b *testing.B) {
+	z := randomBigInt(1)
+	y := randomBigInt(2)
+	w := new(big.Int)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		w.Mul(z, y)
+		w.Mod(w, pBI)
+	}
+}
+
 func TestElementToBigInt(t *testing.T) {
 	type args struct {
 		a Element
@@ -17,7 +52,6 @@ func TestElementToBigInt(t *testing.T) {
 		wantZ *big.Int
 	}{
 		{"0", args{Element{0, 0, 0, 0}}, big.NewInt(0)},
-		{"1", args{Element{1, 0, 0, 0}}, big.NewInt(1)},
 		{"1", args{Element{1, 0, 0, 0}}, big.NewInt(1)},
 		{"2^64", args{Element{0, 1, 0, 0}}, new(big.Int).Lsh(big.NewInt(1), 64)},
 		{"p", args{p}, pBI},
@@ -43,7 +77,7 @@ func TestBigIntToElement(t *testing.T) {
 		{"0", args{big.NewInt(0)}, Element{0, 0, 0, 0}},
 		{"1", args{big.NewInt(1)}, Element{1, 0, 0, 0}},
 		{"2^64", args{new(big.Int).Lsh(big.NewInt(1), 64)}, Element{0, 1, 0, 0}},
-		{"p", args{pBI}, p},
+		{"p", args{pBI}, Element{0, 0, 0, 0}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -74,4 +108,12 @@ func Test_BigIntToElement_ElementToBigInt_random(t *testing.T) {
 func randomElement(seed int) Element {
 	r := rand.NewSource(int64(seed))
 	return Element{uint64(r.Int63()), uint64(r.Int63()), uint64(r.Int63()), uint64(r.Int63())}
+}
+
+func randomBigInt(seed int) *big.Int {
+	r := rand.New(rand.NewSource(int64(seed)))
+	z := new(big.Int)
+	n := new(big.Int).Lsh(big.NewInt(1), 256)
+	z.Rand(r, n)
+	return z
 }

@@ -9,12 +9,7 @@ var (
 	// p as a *big.Int.
 	pBI, _ = new(big.Int).SetString("7fffffffffffffffffffffffffffddf40a09853f04c9246b1f1c11c8ad49dc91", 16)
 	// p as an Element.
-	p      = Element{2241686268122094737, 723255720879400043, 18446744073709542900, 576460752303423487}
-	two256 = Element{13963371537465362142, 17000232631950751529, 17431, 0}
-	two320 = Element{0, 13963371537465362142, 17000232631950751529, 1089}
-	two384 = Element{6946274766781380961, 1834951742433355726, 13963371537769226683, 486053787193498482}
-	two448 = Element{1195137535819132669, 7639405055976263065, 2336821022378087212, 296249968807153639}
-	two512 = Element{15937601485410354464, 16159380161337193251, 11972309219966232048, 146051313898630730}
+	p = Element{2241686268122094737, 723255720879400043, 18446744073709542900, 9223372036854775807}
 )
 
 // Element represents a single element a ∈ 𝔽ₚ, where
@@ -30,78 +25,112 @@ var (
 // A representation is "normalized" if the it represents an integer in the interval [0,p).
 type Element [4]uint64
 
-// Add a = b + c
-func (a Element) Add(b, c Element) {
-	var carry uint64
-	for i := 0; i < 4; i++ {
-		a[i], carry = bits.Add64(b[i], c[i], carry)
-	}
-	// TODO: normalize
+// Add a + b
+func Add(a, b Element) Element {
+	a = removeTopBit(a)
+	b = removeTopBit(b)
+	return add(a, b)
 }
 
-// Mul a = b*c
-func (a Element) Mul(b, c Element) {
-	// bits.Mul64(x, y uint64) (hi, lo uint64)
+func add(a [4]uint64, b [4]uint64) (c [4]uint64) {
+	var carry uint64
+	for i := 0; i < 4; i++ {
+		c[i], carry = bits.Add64(a[i], b[i], carry)
+	}
+	return
+}
+
+func removeTopBit(a [4]uint64) [4]uint64 {
+	for i := 0; i < 2; i++ {
+		topBit := a[3] >> 63
+		a[3] &= 0x7fffffffffffffff
+		// 2^255 = [4]uint64{16205057805587456879, 17723488352830151572, 8715, 0}
+		var two255 = [4]uint64{16205057805587456879 * topBit, 17723488352830151572 * topBit, 8715 * topBit, 0}
+		a = add(a, two255)
+	}
+	return a
+}
+
+func mul64by256(x uint64, y [4]uint64) (a [5]uint64) {
+	var carry, lo uint64
+	for i := 0; i < 3; i++ {
+		a[i+1], lo = bits.Mul64(x, y[i])
+		a[i], carry = bits.Add64(y[i], lo, carry)
+	}
+	return a
+}
+
+func reduce5(a [5]uint64) (b [4]uint64) {
+	b0 := removeTopBit([4]uint64{a[0], a[1], a[2], a[3]})
+	// 2^256 = [4]uint64{13963371537465362142, 17000232631950751529, 17431, 0}
+	b1 := mul64by256(a[4], [4]uint64{13963371537465362142, 17000232631950751529, 17431, 0})
+	// don't worry about removing the top bit of b1
+	// because (2^256 % p) * (2^64 - 1) < 2^208 << 2^255
+	b = add(b0, [4]uint64{b1[0], b1[1], b1[2], b1[3]})
+	return
+}
+
+func mul(a, b [4]uint64) [8]uint64 {
 	/*
 		(a + b*2^64 + c*2^128 + d*2^192) * (e + f*2^64 + g*2^128 + h*2^192)
 
+		ae,af,ag,ah = m00*2^000 + m01*2^064 + m02*2^128 + m03*2^192 + m04*2^256
+		be,bf,bg,bh =             m10*2^064 + m11*2^128 + m12*2^192 + m13*2^256 + m14*2^320
+		ce,cf,cg,ch =                         m20*2^128 + m21*2^192 + m22*2^256 + m23*2^320 + m24*2^384
+		de,df,dg,dh =                                     m30*2^192 + m31*2^256 + m32*2^320 + m33*2^384 + m34*2^448
 	*/
-}
-
-// Inv a = 1/b
-func (a Element) Inv(b Element) {
-
-}
-
-// Sub c = b - c
-func (a Element) Sub(b, c Element) {
-	var borrow uint64
+	var m [4][5]uint64
 	for i := 0; i < 4; i++ {
-		a[i], borrow = bits.Sub64(b[i], c[i], borrow)
+		m[i] = mul64by256(a[i], b)
 	}
-	// TODO: check borrow and sub p if necessary?
+	var r [8]uint64
+	r[0], r[1], r[2], r[3], r[4] = m[0][0], m[0][1], m[0][2], m[0][3], m[0][4]
+	for i := 1; i < 4; i++ {
+		var carry uint64
+		for j := 0; j < 5; j++ {
+			r[i+j], carry = bits.Add64(r[i+j], m[i][j], carry)
+		}
+	}
+	return r
+}
+
+// Mul a*b
+func Mul(a, b Element) Element {
+	r := mul(a, b)
 	/*
-	   func Sub64(x, y, borrow uint64) (diff, borrowOut uint64)
-	   Sub64 returns the difference of x, y and borrow: diff = x - y - borrow.
-	   The borrow input must be 0 or 1; otherwise the behavior is undefined.
-	   The borrowOut output is guaranteed to be 0 or 1.
+
+	   // 2^320 = [4]uint64{0, 13963371537465362142, 17000232631950751529, 1089},
+	   // 2^384 = [4]uint64{6946274766781380961, 1834951742433355726, 13963371537769226683, 486053787193498482},
+	   // 2^448 = [4]uint64{1195137535819132669, 7639405055976263065, 2336821022378087212, 296249968807153639},
 	*/
-}
+	r0 := removeTopBit(reduce5([5]uint64{r[0], r[1], r[2], r[3], r[4]}))
+	r1 := removeTopBit(reduce5(mul64by256(r[5], [4]uint64{0, 13963371537465362142, 17000232631950751529, 1089})))
+	r2 := removeTopBit(reduce5(mul64by256(r[6], [4]uint64{6946274766781380961, 1834951742433355726, 13963371537769226683, 486053787193498482})))
+	r3 := removeTopBit(reduce5(mul64by256(r[7], [4]uint64{1195137535819132669, 7639405055976263065, 2336821022378087212, 296249968807153639})))
 
-// Neg a = -b
-func (a Element) Neg(b Element) {
-	b.Sub(p, a)
-}
+	s0 := removeTopBit(add(r0, r1))
+	s1 := removeTopBit(add(r2, r3))
 
-// Cmp compares a to b as integers in [0,p).
-func (a Element) Cmp(b Element) {
-
+	return add(s0, s1)
 }
 
 // ElementToBigInt converts an element to a *big.Int.
 func ElementToBigInt(a Element) (z *big.Int) {
-	arr := a[:]
-	if len(arr) == 0 {
-		return new(big.Int)
+	z = new(big.Int)
+	for i := 3; i >= 0; i-- {
+		z.Lsh(z, 64)
+		z.Add(z, new(big.Int).SetUint64(a[i]))
 	}
-	z = new(big.Int).SetUint64(arr[len(arr)-1])
-	for i := len(arr) - 2; i >= 0; i-- {
-		z.Add(z.Lsh(z, 64), new(big.Int).SetUint64(arr[i]))
-	}
-	return z
+	return
 }
 
 // BigIntToElement converts a big.Int to an element.
 func BigIntToElement(z *big.Int) (a Element) {
 	z = new(big.Int).Mod(z, pBI) // Use a copy to avoid overwriting anything.
-	var arr []uint64
-	low64 := new(big.Int).SetUint64(0xffffffffffffffff)
-	for z.BitLen() > 0 {
-		arr = append(arr, new(big.Int).And(z, low64).Uint64())
+	mask := new(big.Int).SetUint64(0xffffffffffffffff)
+	for i := 0; i < 4; i++ {
+		a[i] = new(big.Int).And(z, mask).Uint64()
 		z.Rsh(z, 64)
 	}
-	for len(arr) < 4 {
-		arr = append(arr, 0)
-	}
-	return Element{arr[0], arr[1], arr[2], arr[3]}
+	return
 }

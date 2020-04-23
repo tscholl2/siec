@@ -16,18 +16,7 @@ func BenchmarkBigIntMultiply(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		z.Mul(x, y)
-	}
-}
-
-func BenchmarkBigIntMod(b *testing.B) {
-	r := rand.New(rand.NewSource(1))
-	x := new(big.Int).Rand(r, q)
-	y := new(big.Int).Rand(r, q)
-	z := new(big.Int).Mul(x, y)
-	w := new(big.Int)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		w.Mod(z, q)
+		z.Mod(z, q)
 	}
 }
 
